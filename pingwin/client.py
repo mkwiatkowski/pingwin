@@ -85,15 +85,24 @@ class PenguinClientProtocol(Protocol):
         display.display_text("Received %s." % data)
 
 
+class ClientConnection(object):
+    "Klasa służąca do obsługi połączenia z serwerem."
+
+    def __init__(self):
+        factory = ClientFactory()
+        factory.protocol = PenguinClientProtocol
+
+        reactor.connectTCP("localhost", 8888, factory)
+
+
 def run():
     global display
+    global connection
 
     display = ClientDisplay()
+    connection = ClientConnection()
 
-    factory = ClientFactory()
-    factory.protocol = PenguinClientProtocol
-
-    reactor.connectTCP("localhost", 8888, factory)
+    # Oddajemy sterowanie do głównej pętli biblioteki Twisted.
     reactor.run()
 
 
