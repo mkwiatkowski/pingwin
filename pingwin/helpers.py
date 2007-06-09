@@ -14,3 +14,6 @@ def load_image(name):
     image.set_colorkey(Color("white"))
 
     return image
+
+def level_path(name):
+    return os.path.join(DATA_DIR, 'level', name)
