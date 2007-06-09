@@ -47,12 +47,14 @@ class BoardSurface(pygame.Surface):
 class ClientDisplay(object):
     "Klasa służąca do manipulowania ekranem."
 
+    # Gra działa w rozdzielczości 640x480.
+    width = 640
+    height = 480
+
     # Odległość planszy od górnej granicy ekranu w pikselach.
-    board_distance_from_top = 80
+    status_bar_height = 80
 
     def __init__(self, title="Penguin"):
-        self.width = 640
-        self.height = 480
         self.title = title
 
         # Inicjalizacja, ustawienie rozdzielczości i tytułu.
@@ -67,22 +69,35 @@ class ClientDisplay(object):
         self.penguin = PenguinSprite()
 
         self.display_text("Client ready.")
-        self._display_board()
-        self._display_penguin_at(0, 0)
 
     def display_text(self, text):
+        self.text = text
+        self._repaint()
+
+    def _paint_status_bar(self):
+        status_bar = pygame.Surface((self.width, self.status_bar_height))
+        self.screen.blit(status_bar, (0,0))
+
+    def _paint_text(self):
         font = pygame.font.Font(None, 36)
-        textobj = font.render(text, 1, Color("white"))
+        textobj = font.render(self.text, 1, Color("white"))
         textpos = textobj.get_rect(x=50, y=50)
 
         self.screen.blit(textobj, textpos)
 
+    def _repaint(self):
+        """Przerysuj cały ekran.
+        """
+        self._paint_status_bar()
+        self._paint_text()
+        self._paint_board()
+        self._paint_penguin_at(0, 0)
         pygame.display.flip()
 
-    def _display_board(self):
-        self.screen.blit(self.board, (0, self.board_distance_from_top))
+    def _paint_board(self):
+        self.screen.blit(self.board, (0, self.status_bar_height))
 
-    def _display_penguin_at(self, x, y):
+    def _paint_penguin_at(self, x, y):
         """Wyświetl pingwina w pozycji na planszy określonej przez podane
         współrzędne.
         """
@@ -91,10 +106,9 @@ class ClientDisplay(object):
 
         coordinates = self.penguin.centered_at(
             x * self.board.ground_width,
-            self.board_distance_from_top + y * self.board.ground_height)
+            self.status_bar_height + y * self.board.ground_height)
 
         self.screen.blit(self.penguin.image, coordinates)
-        pygame.display.flip()
 
 
 def get_text_input():
@@ -105,9 +119,13 @@ def get_text_input():
         if event.type == pygame.QUIT:
             return "Quit"
         elif event.type == pygame.KEYDOWN:
-            # Akceptujemy tylko małe litery ASCII.
-            if 97 <= event.key <= 122:
-                return chr(event.key)
+            # Akceptujemy tylko klawisz "Escape", strzałki i małe litery ASCII.
+            if   event.key == pygame.K_ESCAPE: return "Quit"
+            elif event.key == pygame.K_UP:     return "Up"
+            elif event.key == pygame.K_DOWN:   return "Down"
+            elif event.key == pygame.K_RIGHT:  return "Right"
+            elif event.key == pygame.K_LEFT:   return "Left"
+            elif 97 <= event.key <= 122:       return chr(event.key)
 
 
 def wait_many_times(on, then):
