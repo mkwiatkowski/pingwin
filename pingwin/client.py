@@ -8,13 +8,31 @@ from twisted.internet import threads
 import pygame
 from pygame.color import Color
 
+from helpers import load_image
+
+
+class BoardSurface(pygame.Surface):
+    ground_width = 40
+    ground_height = 40
+
+    def __init__(self):
+        # Plansza składa się z szachownicy 16x10 pól.
+        pygame.Surface.__init__(self, (self.ground_width*16, self.ground_height*10))
+        self.fill(Color("white"))
+
+        # Wypełniamy planszę śniegiem.
+        snow_image = load_image('ground/snow.gif')
+        for x in range(0, self.get_width(), 40):
+            for y in range(0, self.get_height(), 40):
+                self.blit(snow_image, (x, y))
+
 
 class ClientDisplay(object):
     "Klasa służąca do manipulowania ekranem."
 
     def __init__(self, title="Penguin"):
-        self.width = 300
-        self.height = 200
+        self.width = 640
+        self.height = 480
         self.title = title
 
         pygame.init()
@@ -22,6 +40,7 @@ class ClientDisplay(object):
         pygame.display.set_caption(self.title)
 
         self.display_text("Client ready.")
+        self._display_board()
 
     def display_text(self, text):
         font = pygame.font.Font(None, 36)
@@ -31,6 +50,11 @@ class ClientDisplay(object):
         self.screen.fill(Color("black"))
         self.screen.blit(textobj, textpos)
 
+        pygame.display.flip()
+
+    def _display_board(self):
+        board = BoardSurface()
+        self.screen.blit(board, (0, 80))
         pygame.display.flip()
 
 
