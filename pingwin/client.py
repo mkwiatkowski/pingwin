@@ -12,10 +12,13 @@ from helpers import load_image
 
 
 class PenguinSprite(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
         self.image = load_image('penguin/penguin-1-right.gif')
         self.rect = self.image.get_rect()
+
+        self.x = x
+        self.y = y
 
     def centered_at(self, x, y):
         """Zwróć współrzędne, dla których sylwetka pingwina będzie
@@ -62,16 +65,39 @@ class ClientDisplay(object):
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption(self.title)
 
+        # Ustawienie powtarzania klawiszy.
+        pygame.key.set_repeat(200, 30)
+
         # Utworzenie planszy (będzie niezmienna przez całą grę).
         self.board = BoardSurface()
 
-        # Utworzenie pingwina.
-        self.penguin = PenguinSprite()
+        # Utworzenie pingwina z podaniem jego pierwotnego położenia.
+        self.penguin = PenguinSprite(0, 0)
 
         self.display_text("Client ready.")
 
     def display_text(self, text):
         self.text = text
+        self._repaint()
+
+    def move_penguin(self, direction):
+        """Przesuń pingwina w podanym kierunku.
+        """
+        assert direction in ["Up", "Down", "Right", "Left"]
+
+        if direction == "Up":
+            if self.penguin.y > 0:
+                self.penguin.y -= 1
+        elif direction == "Down":
+            if self.penguin.y < self.board.y_count - 1:
+                self.penguin.y += 1
+        elif direction == "Right":
+            if self.penguin.x < self.board.x_count - 1:
+                self.penguin.x += 1
+        elif direction == "Left":
+            if self.penguin.x > 0:
+                self.penguin.x -= 1
+
         self._repaint()
 
     def _paint_status_bar(self):
@@ -91,22 +117,21 @@ class ClientDisplay(object):
         self._paint_status_bar()
         self._paint_text()
         self._paint_board()
-        self._paint_penguin_at(0, 0)
+        self._paint_penguin()
         pygame.display.flip()
 
     def _paint_board(self):
         self.screen.blit(self.board, (0, self.status_bar_height))
 
-    def _paint_penguin_at(self, x, y):
-        """Wyświetl pingwina w pozycji na planszy określonej przez podane
-        współrzędne.
+    def _paint_penguin(self):
+        """Wyświetl pingwina w pozycji określonej przez jego atrybutu x i y.
         """
-        assert 0 <= x < self.board.x_count
-        assert 0 <= y < self.board.y_count
+        assert 0 <= self.penguin.x < self.board.x_count
+        assert 0 <= self.penguin.y < self.board.y_count
 
         coordinates = self.penguin.centered_at(
-            x * self.board.ground_width,
-            self.status_bar_height + y * self.board.ground_height)
+            self.penguin.x * self.board.ground_width,
+            self.penguin.y * self.board.ground_height + self.status_bar_height)
 
         self.screen.blit(self.penguin.image, coordinates)
 
@@ -156,7 +181,10 @@ class PenguinClientProtocol(Protocol):
             self.transport.write(data)
 
         def display_and_send(data):
-            display.display_text("Pressed %s." % data)
+            if data in ["Up", "Down", "Right", "Left"]:
+                display.move_penguin(data)
+            else:
+                display.display_text("Pressed %s." % data)
             send_to_server_or_exit(data)
 
         # Zainicuj wątek, który czeka na wejście z klawiatury.
