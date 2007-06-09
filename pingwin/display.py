@@ -17,7 +17,14 @@ STATUS_BAR_HEIGHT = 80
 class PenguinSprite(pygame.sprite.Sprite):
     def __init__(self, x, y):
         pygame.sprite.Sprite.__init__(self)
-        self.image = load_image('penguin/penguin-1-right.gif')
+        self.images = {
+            'Up':    load_image('penguin/penguin-1-right.gif'), # XXX
+            'Down':  load_image('penguin/penguin-1-right.gif'), # XXX
+            'Right': load_image('penguin/penguin-1-right.gif'),
+            'Left':  load_image('penguin/penguin-1-left.gif')}
+
+        # Pingwin na początku patrzy w dół.
+        self.image = self.images['Down']
         self.rect = self.image.get_rect()
 
         self.x = x
@@ -27,6 +34,11 @@ class PenguinSprite(pygame.sprite.Sprite):
         """Narysuj siebie na podanym ekranie.
         """
         screen.blit(self.image, self._centered_coordinates())
+
+    def turn(self, direction):
+        """Przekręć pingiwna w wybranym kierunku.
+        """
+        self.image = self.images[direction]
 
     def _centered_coordinates(self):
         """Zwróć współrzędne, dla których sylwetka pingwina będzie
@@ -118,6 +130,7 @@ class ClientDisplay(object):
         """
         assert direction in ["Up", "Down", "Right", "Left"]
 
+        self.penguin.turn(direction)
         if direction == "Up":
             if self.penguin.y > 0:
                 self.penguin.y -= 1
