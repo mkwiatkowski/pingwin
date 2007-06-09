@@ -11,13 +11,30 @@ from pygame.color import Color
 from helpers import load_image
 
 
+class PenguinSprite(pygame.sprite.Sprite):
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = load_image('penguin/penguin-1-right.gif')
+        self.rect = self.image.get_rect()
+
+    def centered_at(self, x, y):
+        """Zwróć współrzędne, dla których sylwetka pingwina będzie
+        wyśrodkowana na polu o współrzędnych lewego górnego rogu x i y.
+        """
+        return (x + 7, y - 26)
+
+
 class BoardSurface(pygame.Surface):
     ground_width = 40
     ground_height = 40
 
+    # Plansza składa się z szachownicy 16x10 pól.
+    x_count = 16
+    y_count = 10
+
     def __init__(self):
-        # Plansza składa się z szachownicy 16x10 pól.
-        pygame.Surface.__init__(self, (self.ground_width*16, self.ground_height*10))
+        pygame.Surface.__init__(self, (self.ground_width * self.x_count,
+                                       self.ground_height * self.y_count))
         self.fill(Color("white"))
 
         # Wypełniamy planszę śniegiem.
@@ -30,31 +47,53 @@ class BoardSurface(pygame.Surface):
 class ClientDisplay(object):
     "Klasa służąca do manipulowania ekranem."
 
+    # Odległość planszy od górnej granicy ekranu w pikselach.
+    board_distance_from_top = 80
+
     def __init__(self, title="Penguin"):
         self.width = 640
         self.height = 480
         self.title = title
 
+        # Inicjalizacja, ustawienie rozdzielczości i tytułu.
         pygame.init()
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption(self.title)
 
+        # Utworzenie planszy (będzie niezmienna przez całą grę).
+        self.board = BoardSurface()
+
+        # Utworzenie pingwina.
+        self.penguin = PenguinSprite()
+
         self.display_text("Client ready.")
         self._display_board()
+        self._display_penguin_at(0, 0)
 
     def display_text(self, text):
         font = pygame.font.Font(None, 36)
         textobj = font.render(text, 1, Color("white"))
         textpos = textobj.get_rect(x=50, y=50)
 
-        self.screen.fill(Color("black"))
         self.screen.blit(textobj, textpos)
 
         pygame.display.flip()
 
     def _display_board(self):
-        board = BoardSurface()
-        self.screen.blit(board, (0, 80))
+        self.screen.blit(self.board, (0, self.board_distance_from_top))
+
+    def _display_penguin_at(self, x, y):
+        """Wyświetl pingwina w pozycji na planszy określonej przez podane
+        współrzędne.
+        """
+        assert 0 <= x < self.board.x_count
+        assert 0 <= y < self.board.y_count
+
+        coordinates = self.penguin.centered_at(
+            x * self.board.ground_width,
+            self.board_distance_from_top + y * self.board.ground_height)
+
+        self.screen.blit(self.penguin.image, coordinates)
         pygame.display.flip()
 
 
