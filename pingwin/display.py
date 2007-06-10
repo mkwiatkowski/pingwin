@@ -4,6 +4,8 @@ from __future__ import with_statement
 import pygame
 from pygame.color import Color
 
+import random
+
 from helpers import load_image, level_path
 
 # Wysokość i szerokość podstawowej kafelki podłoża.
@@ -59,19 +61,46 @@ class BoardSurface(pygame.Surface):
         self.fill(Color("white"))
         self._init_grounds()
 
-        level = list(self._read_level(level_name))
+        level_string = self._read_level(level_name)
 
         # Wypełniamy planszę według znaków z mapki poziomu.
+        tiles = list(level_string)
         for y in range(0, self.get_height(), 40):
             for x in range(0, self.get_width(), 40):
                 # Pobierz następną kafelkę.
-                tile = level.pop(0)
+                tile = tiles.pop(0)
                 # Jeżeli w opisie poziomu użyto nieznanej kafelki,
                 #   użyj zamiast jej śniegu.
                 if tile not in self.ground:
                     tile = ' '
                 # Wyświetl kafelkę na planszy.
                 self.blit(self.ground[tile], (x, y))
+
+        # Lista kafelek, na które nie można wejść.
+        tiles = list(level_string)
+        self.blocked_tiles = []
+        for y in range(self.y_count):
+            for x in range(self.x_count):
+                tile = tiles.pop(0)
+                # Jeżeli kafelka jest ścianą, dodaj jej współrzędne do listy
+                # niedostępnych miejsc.
+                if tile in ['|', '=']:
+                    self.blocked_tiles.append((x, y))
+
+    def random_free_tile(self):
+        """Zwróć współrzędne losowego wolnego pola.
+        """
+        while True:
+            x = random.randrange(0, self.x_count)
+            y = random.randrange(0, self.y_count)
+            if self.is_free_tile(x, y):
+                return (x, y)
+
+    def is_free_tile(self, x, y):
+        """Zwróc wartość prawda, jeżeli pole o podanych współrzędnych
+        jest wolne.
+        """
+        return (x, y) not in self.blocked_tiles
 
     def _init_grounds(self):
         """Wczytaj obrazki podłoża, zbierając je w słowniku
@@ -116,8 +145,8 @@ class ClientDisplay(object):
         # Utworzenie planszy (będzie niezmienna przez całą grę).
         self.board = BoardSurface('default')
 
-        # Utworzenie pingwina z podaniem jego pierwotnego położenia.
-        self.penguin = PenguinSprite(0, 0)
+        # Utworzenie pingwina i postawienie go w losowym miejscu na planszy.
+        self.penguin = PenguinSprite(*self.board.random_free_tile())
 
         self.display_text("Client ready.")
 
@@ -131,18 +160,26 @@ class ClientDisplay(object):
         assert direction in ["Up", "Down", "Right", "Left"]
 
         self.penguin.turn(direction)
+
+        next_location_x = self.penguin.x
+        next_location_y = self.penguin.y
+
         if direction == "Up":
-            if self.penguin.y > 0:
-                self.penguin.y -= 1
+            next_location_y -= 1
         elif direction == "Down":
-            if self.penguin.y < self.board.y_count - 1:
-                self.penguin.y += 1
+            next_location_y += 1
         elif direction == "Right":
-            if self.penguin.x < self.board.x_count - 1:
-                self.penguin.x += 1
+            next_location_x += 1
         elif direction == "Left":
-            if self.penguin.x > 0:
-                self.penguin.x -= 1
+            next_location_x -= 1
+
+        # Jeżeli krok skierowany jest w stronę wolnego pola i nie wykracza
+        # ono poza planszę, to krok jest wykonywany.
+        if self.board.is_free_tile(next_location_x, next_location_y):
+            if 0 < next_location_x < self.board.x_count - 1:
+                self.penguin.x = next_location_x
+            if 0 < next_location_y < self.board.y_count - 1:
+                self.penguin.y = next_location_y
 
         self._repaint()
 
