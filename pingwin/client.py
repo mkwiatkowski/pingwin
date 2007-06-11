@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import os
+import time
+
 from twisted.internet.protocol import ClientFactory
 from twisted.internet.protocol import Protocol
 from twisted.internet import reactor
@@ -9,7 +12,8 @@ import pygame
 
 from display import ClientDisplay
 from board import Board
-from messages import serialize, deserialize, WelcomeMessage
+from messages import send, receive
+from messages import WelcomeMessage, StartGameMessage, EndGameMessage
 
 
 def get_text_input():
@@ -37,7 +41,8 @@ def wait_many_times(on, then):
     def do_and_wait_again(data):
         try:
             then(data)
-        except:
+        except Exception, e:
+            end_game("Exception caught: %s." % e)
             return
         wait_many_times(on, then)
 
@@ -53,6 +58,13 @@ def take_action(key):
     else:
         display.display_text("Pressed %s." % key)
 
+def end_game(reason):
+    """Zakończ grę wyświetlając na ekranie powód.
+    """
+    display.display_text(reason)
+    time.sleep(2)
+    os._exit(1)
+
 class PenguinClientProtocol(Protocol):
     """Klasa służąca do obsługi połączenia z serwerem.
     """
@@ -66,34 +78,51 @@ class PenguinClientProtocol(Protocol):
         def send_to_server_or_exit(data):
             # Zakończ program, gdy użytkownik o to prosi.
             if data == "Quit":
-                reactor.stop()
-                # Rzucamy wyjątkiem by wyjść z pętli wait_many_times().
-                raise Exception
+                end_game("User quit.")
 
-            self.transport.write(serialize(data))
+            send(self.transport, data)
 
         def take_action_and_send(data):
             take_action(data)
             send_to_server_or_exit(data)
 
-        display.display_text("Connected.")
+        display.display_text("Connected to server, loading board...")
 
         # Zainicuj wątek, który czeka na wejście z klawiatury.
         wait_many_times(on=get_text_input, then=take_action_and_send)
 
+    def connectionLost(self, reason):
+        end_game("Disconnected.")
+
     def dataReceived(self, data):
         """Funkcja wywoływana zawsze, gdy otrzymamy dane od serwera.
         """
-        message = deserialize(data)
+        messages = receive(data)
+        for message in messages:
+            self._processMessage(message)
 
+    def _processMessage(self, message):
+        """Zareaguj na wiadomość.
+        """
         # Pobierz nazwę planszy od serwera, wczytaj ją i pokaż na ekranie.
         if isinstance(message, WelcomeMessage):
+            print "Got welcome message from the server."
             global board
             board = Board(message.level_name)
             display.display_board(board)
+            display.display_text("Waiting for other players to join...")
+        # Wyświetl pigwiny w pozycjach podanych przez serwer i rozpocznij grę.
+        elif isinstance(message, StartGameMessage):
+            print "Game started by the server."
+            display.display_penguins(message.penguin_id,
+                                     message.penguins_positions)
+            display.display_text("Go!")
+        elif isinstance(message, EndGameMessage):
+            print "Game stopped by the server."
+            end_game("Game over.")
         # W innym wypadku po prostu wyświetl otrzymane dane.
         else:
-            display.display_text("Received %s." % message)
+            print "Received %s." % message
 
 class ClientConnection(object):
     """Klasa inicująca połączenie z serwerem.

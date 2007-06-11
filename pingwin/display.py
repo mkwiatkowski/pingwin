@@ -14,13 +14,14 @@ STATUS_BAR_HEIGHT = 80
 
 
 class PenguinSprite(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, id, x, y):
+        id = 1 # XXX we need more images
         pygame.sprite.Sprite.__init__(self)
         self.images = {
-            'Up':    load_image('penguin/penguin-1-right.gif'), # XXX
-            'Down':  load_image('penguin/penguin-1-right.gif'), # XXX
-            'Right': load_image('penguin/penguin-1-right.gif'),
-            'Left':  load_image('penguin/penguin-1-left.gif')}
+            'Up':    load_image('penguin/penguin-%d-right.gif' % id), # XXX
+            'Down':  load_image('penguin/penguin-%d-right.gif' % id), # XXX
+            'Right': load_image('penguin/penguin-%d-right.gif' % id),
+            'Left':  load_image('penguin/penguin-%d-left.gif' % id)}
 
         # Pingwin na początku patrzy w dół.
         self.image = self.images['Down']
@@ -91,6 +92,7 @@ class ClientDisplay(object):
 
     def __init__(self, title="Penguin"):
         self.title = title
+        self.playing = False
 
         # Inicjalizacja, ustawienie rozdzielczości i tytułu.
         pygame.init()
@@ -101,15 +103,25 @@ class ClientDisplay(object):
         pygame.key.set_repeat(200, 30)
 
     def display_board(self, board):
-        """Wyświetl planszę na ekranie i umieść na niej pingwina.
+        """Wyświetl na ekranie pustą planszę.
         """
         self.board = board
 
         # Utworzenie planszy (będzie niezmienna przez całą grę).
         self.board_surface = BoardSurface(self.board)
 
-        # Utworzenie pingwina i postawienie go w losowym miejscu na planszy.
-        self.penguin = PenguinSprite(*self.board.random_free_tile())
+        self._repaint()
+
+    def display_penguins(self, id, penguins_positions):
+        """Wyświetl pingwiny na ekranie i rozpocznij grę.
+        """
+        self.penguin_id = id
+
+        self.penguins = {}
+        for id, position in enumerate(penguins_positions):
+            self.penguins[id] = PenguinSprite(id, *position)
+
+        self.playing = True
 
         self._repaint()
 
@@ -120,12 +132,17 @@ class ClientDisplay(object):
     def move_penguin(self, direction):
         """Przesuń pingwina w podanym kierunku.
         """
+        if not self.playing:
+            return
+
         assert direction in ["Up", "Down", "Right", "Left"]
 
-        self.penguin.turn(direction)
+        penguin = self._this_penguin()
 
-        next_location_x = self.penguin.x
-        next_location_y = self.penguin.y
+        penguin.turn(direction)
+
+        next_location_x = penguin.x
+        next_location_y = penguin.y
 
         if direction == "Up":
             next_location_y -= 1
@@ -140,19 +157,24 @@ class ClientDisplay(object):
         # ono poza planszę, to krok jest wykonywany.
         if self.board.is_free_tile(next_location_x, next_location_y):
             if 0 < next_location_x < self.board.x_count - 1:
-                self.penguin.x = next_location_x
+                penguin.x = next_location_x
             if 0 < next_location_y < self.board.y_count - 1:
-                self.penguin.y = next_location_y
+                penguin.y = next_location_y
 
         self._repaint()
+
+    def _this_penguin(self):
+        return self.penguins[self.penguin_id]
 
     def _repaint(self):
         """Przerysuj cały ekran.
         """
         self._paint_status_bar()
         self._paint_text()
-        self._paint_board()
-        self._paint_penguin()
+        if hasattr(self, 'board_surface'):
+            self._paint_board()
+        if hasattr(self, 'penguins'):
+            self._paint_penguins()
         pygame.display.flip()
 
     def _paint_status_bar(self):
@@ -167,18 +189,13 @@ class ClientDisplay(object):
         self.screen.blit(textobj, textpos)
 
     def _paint_board(self):
-        if not hasattr(self, 'board_surface'):
-            return
-
         self.screen.blit(self.board_surface, (0, STATUS_BAR_HEIGHT))
 
-    def _paint_penguin(self):
-        """Wyświetl pingwina w pozycji określonej przez jego atrybutu x i y.
+    def _paint_penguins(self):
+        """Wyświetl wszystkie pingwiny.
         """
-        if not hasattr(self, 'penguin'):
-            return
+        for penguin in self.penguins.values():
+            assert 0 <= penguin.x < self.board.x_count
+            assert 0 <= penguin.y < self.board.y_count
 
-        assert 0 <= self.penguin.x < self.board.x_count
-        assert 0 <= self.penguin.y < self.board.y_count
-
-        self.penguin.paint_on(self.screen)
+            penguin.paint_on(self.screen)

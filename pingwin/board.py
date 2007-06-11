@@ -42,15 +42,6 @@ class Board(object):
                 if tile in ['|', '=']:
                     self.blocked_tiles.append((x, y))
 
-    def random_free_tile(self):
-        """Zwróć współrzędne losowego wolnego pola.
-        """
-        while True:
-            x = random.randrange(0, self.x_count)
-            y = random.randrange(0, self.y_count)
-            if self.is_free_tile(x, y):
-                return (x, y)
-
     def is_free_tile(self, x, y):
         """Zwróc wartość prawda, jeżeli pole o podanych współrzędnych
         jest wolne.
@@ -64,3 +55,24 @@ class Board(object):
             # Zwróc zawartość pliku pomijając znaki nowej linii.
             return fd.read().replace("\n", "")
 
+class ServerBoard(Board):
+    """Plansza z metodami przydatnymi dla serwera.
+    """
+    def random_free_tiles(self, number):
+        """Zwróć podaną liczbę wolnych losowych pól.
+        """
+        tiles = []
+        while len(tiles) != number:
+            tile = self.random_free_tile()
+            if tile not in tiles:
+                tiles.append(tile)
+        return tiles
+
+    def random_free_tile(self):
+        """Zwróć współrzędne losowego wolnego pola.
+        """
+        while True:
+            x = random.randrange(0, self.x_count)
+            y = random.randrange(0, self.y_count)
+            if self.is_free_tile(x, y):
+                return (x, y)
