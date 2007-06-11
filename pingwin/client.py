@@ -9,6 +9,7 @@ import pygame
 
 from display import ClientDisplay
 from board import Board
+from messages import serialize, deserialize, WelcomeMessage
 
 
 def get_text_input():
@@ -44,53 +45,75 @@ def wait_many_times(on, then):
     d = threads.deferToThread(on)
     d.addCallback(do_and_wait_again)
 
+def take_action(key):
+    """Podejmij odpowiednią akcję na podstawie wciśniętego klawisza.
+    """
+    if key in ["Up", "Down", "Right", "Left"]:
+        display.move_penguin(key)
+    else:
+        display.display_text("Pressed %s." % key)
 
 class PenguinClientProtocol(Protocol):
+    """Klasa służąca do obsługi połączenia z serwerem.
+    """
+
     def connectionMade(self):
+        """Funkcja wywoływana w momencie nawiązania połączenia z serwerem.
+
+        Tutaj inicjowana jest pętla wait_many_times() działająca na funkcji
+        get_text_input() pozwalając użytkownikowi na interakcję z klawiatury.
+        """
         def send_to_server_or_exit(data):
             # Zakończ program, gdy użytkownik o to prosi.
             if data == "Quit":
                 reactor.stop()
+                # Rzucamy wyjątkiem by wyjść z pętli wait_many_times().
                 raise Exception
 
-            self.transport.write(data)
+            self.transport.write(serialize(data))
 
-        def display_and_send(data):
-            if data in ["Up", "Down", "Right", "Left"]:
-                display.move_penguin(data)
-            else:
-                display.display_text("Pressed %s." % data)
+        def take_action_and_send(data):
+            take_action(data)
             send_to_server_or_exit(data)
 
+        display.display_text("Connected.")
+
         # Zainicuj wątek, który czeka na wejście z klawiatury.
-        wait_many_times(on=get_text_input, then=display_and_send)
+        wait_many_times(on=get_text_input, then=take_action_and_send)
 
     def dataReceived(self, data):
-        display.display_text("Received %s." % data)
+        """Funkcja wywoływana zawsze, gdy otrzymamy dane od serwera.
+        """
+        message = deserialize(data)
 
+        # Pobierz nazwę planszy od serwera, wczytaj ją i pokaż na ekranie.
+        if isinstance(message, WelcomeMessage):
+            global board
+            board = Board(message.level_name)
+            display.display_board(board)
+        # W innym wypadku po prostu wyświetl otrzymane dane.
+        else:
+            display.display_text("Received %s." % message)
 
 class ClientConnection(object):
-    "Klasa służąca do obsługi połączenia z serwerem."
-
+    """Klasa inicująca połączenie z serwerem.
+    """
     def __init__(self):
         factory = ClientFactory()
         factory.protocol = PenguinClientProtocol
-
         reactor.connectTCP("localhost", 8888, factory)
 
 
 def run():
-    global board
     global display
     global connection
 
-    board = Board('default')
-    display = ClientDisplay(board)
+    display = ClientDisplay()
+    display.display_text("Connecting to server...")
     connection = ClientConnection()
 
     # Oddajemy sterowanie do głównej pętli biblioteki Twisted.
     reactor.run()
-
 
 if __name__ == '__main__':
     run()

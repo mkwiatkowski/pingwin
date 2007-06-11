@@ -89,8 +89,7 @@ class ClientDisplay(object):
     width = 640
     height = 480
 
-    def __init__(self, board, title="Penguin"):
-        self.board = board
+    def __init__(self, title="Penguin"):
         self.title = title
 
         # Inicjalizacja, ustawienie rozdzielczości i tytułu.
@@ -101,13 +100,18 @@ class ClientDisplay(object):
         # Ustawienie powtarzania klawiszy.
         pygame.key.set_repeat(200, 30)
 
+    def display_board(self, board):
+        """Wyświetl planszę na ekranie i umieść na niej pingwina.
+        """
+        self.board = board
+
         # Utworzenie planszy (będzie niezmienna przez całą grę).
         self.board_surface = BoardSurface(self.board)
 
         # Utworzenie pingwina i postawienie go w losowym miejscu na planszy.
         self.penguin = PenguinSprite(*self.board.random_free_tile())
 
-        self.display_text("Client ready.")
+        self._repaint()
 
     def display_text(self, text):
         self.text = text
@@ -163,11 +167,17 @@ class ClientDisplay(object):
         self.screen.blit(textobj, textpos)
 
     def _paint_board(self):
+        if not hasattr(self, 'board_surface'):
+            return
+
         self.screen.blit(self.board_surface, (0, STATUS_BAR_HEIGHT))
 
     def _paint_penguin(self):
         """Wyświetl pingwina w pozycji określonej przez jego atrybutu x i y.
         """
+        if not hasattr(self, 'penguin'):
+            return
+
         assert 0 <= self.penguin.x < self.board.x_count
         assert 0 <= self.penguin.y < self.board.y_count
 
