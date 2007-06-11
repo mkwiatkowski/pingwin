@@ -8,6 +8,7 @@ from twisted.internet import threads
 import pygame
 
 from display import ClientDisplay
+from board import Board
 
 
 def get_text_input():
@@ -79,10 +80,12 @@ class ClientConnection(object):
 
 
 def run():
+    global board
     global display
     global connection
 
-    display = ClientDisplay()
+    board = Board('default')
+    display = ClientDisplay(board)
     connection = ClientConnection()
 
     # Oddajemy sterowanie do głównej pętli biblioteki Twisted.

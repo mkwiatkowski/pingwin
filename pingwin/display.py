@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
-from __future__ import with_statement
 
 import pygame
 from pygame.color import Color
 
-import random
-
-from helpers import load_image, level_path
+from helpers import load_image
 
 # Wysokość i szerokość podstawowej kafelki podłoża.
 TILE_WIDTH = 40
@@ -51,20 +48,14 @@ class PenguinSprite(pygame.sprite.Sprite):
 
 
 class BoardSurface(pygame.Surface):
-    # Plansza składa się z szachownicy 16x10 pól.
-    x_count = 16
-    y_count = 10
-
-    def __init__(self, level_name):
-        pygame.Surface.__init__(self, (TILE_WIDTH * self.x_count,
-                                       TILE_HEIGHT * self.y_count))
+    def __init__(self, board):
+        pygame.Surface.__init__(self, (TILE_WIDTH * board.x_count,
+                                       TILE_HEIGHT * board.y_count))
         self.fill(Color("white"))
         self._init_grounds()
 
-        level_string = self._read_level(level_name)
-
         # Wypełniamy planszę według znaków z mapki poziomu.
-        tiles = list(level_string)
+        tiles = list(board.level_string)
         for y in range(0, self.get_height(), 40):
             for x in range(0, self.get_width(), 40):
                 # Pobierz następną kafelkę.
@@ -75,32 +66,6 @@ class BoardSurface(pygame.Surface):
                     tile = ' '
                 # Wyświetl kafelkę na planszy.
                 self.blit(self.ground[tile], (x, y))
-
-        # Lista kafelek, na które nie można wejść.
-        tiles = list(level_string)
-        self.blocked_tiles = []
-        for y in range(self.y_count):
-            for x in range(self.x_count):
-                tile = tiles.pop(0)
-                # Jeżeli kafelka jest ścianą, dodaj jej współrzędne do listy
-                # niedostępnych miejsc.
-                if tile in ['|', '=']:
-                    self.blocked_tiles.append((x, y))
-
-    def random_free_tile(self):
-        """Zwróć współrzędne losowego wolnego pola.
-        """
-        while True:
-            x = random.randrange(0, self.x_count)
-            y = random.randrange(0, self.y_count)
-            if self.is_free_tile(x, y):
-                return (x, y)
-
-    def is_free_tile(self, x, y):
-        """Zwróc wartość prawda, jeżeli pole o podanych współrzędnych
-        jest wolne.
-        """
-        return (x, y) not in self.blocked_tiles
 
     def _init_grounds(self):
         """Wczytaj obrazki podłoża, zbierając je w słowniku
@@ -117,13 +82,6 @@ class BoardSurface(pygame.Surface):
             '/': load_image('ground/ice-vertical-middle.gif'),
             ',': load_image('ground/ice-vertical-bottom.gif')}
 
-    def _read_level(self, name):
-        """Odczytaj dane poziomu o podanej nazwie.
-        """
-        with open(level_path(name)) as fd:
-            # Zwróc zawartość pliku pomijając znaki nowej linii.
-            return fd.read().replace("\n", "")
-
 class ClientDisplay(object):
     "Klasa służąca do manipulowania ekranem."
 
@@ -131,7 +89,8 @@ class ClientDisplay(object):
     width = 640
     height = 480
 
-    def __init__(self, title="Penguin"):
+    def __init__(self, board, title="Penguin"):
+        self.board = board
         self.title = title
 
         # Inicjalizacja, ustawienie rozdzielczości i tytułu.
@@ -143,7 +102,7 @@ class ClientDisplay(object):
         pygame.key.set_repeat(200, 30)
 
         # Utworzenie planszy (będzie niezmienna przez całą grę).
-        self.board = BoardSurface('default')
+        self.board_surface = BoardSurface(self.board)
 
         # Utworzenie pingwina i postawienie go w losowym miejscu na planszy.
         self.penguin = PenguinSprite(*self.board.random_free_tile())
@@ -204,7 +163,7 @@ class ClientDisplay(object):
         self.screen.blit(textobj, textpos)
 
     def _paint_board(self):
-        self.screen.blit(self.board, (0, STATUS_BAR_HEIGHT))
+        self.screen.blit(self.board_surface, (0, STATUS_BAR_HEIGHT))
 
     def _paint_penguin(self):
         """Wyświetl pingwina w pozycji określonej przez jego atrybutu x i y.
