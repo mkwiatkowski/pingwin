@@ -124,9 +124,20 @@ class BoardSurface(pygame.Surface):
         self.ground = {
             ' ': load_image('ground/snow.gif'),
             '~': load_image('ground/water.gif'),
+            '#': load_image('ground/wall.gif'),
+
+            '[': load_image('ground/wall-horizontal-left.gif'),
+            '=': load_image('ground/wall-horizontal-middle.gif'),
+            ']': load_image('ground/wall-horizontal-right.gif'),
+
+            '?': load_image('ground/wall-vertical-top.gif'),
+            '|': load_image('ground/wall-vertical-middle.gif'),
+            '.': load_image('ground/wall-vertical-bottom.gif'),
+
             '<': load_image('ground/ice-horizontal-left.gif'),
             '-': load_image('ground/ice-horizontal-middle.gif'),
             '>': load_image('ground/ice-horizontal-right.gif'),
+
             '^': load_image('ground/ice-vertical-top.gif'),
             '/': load_image('ground/ice-vertical-middle.gif'),
             ',': load_image('ground/ice-vertical-bottom.gif')}

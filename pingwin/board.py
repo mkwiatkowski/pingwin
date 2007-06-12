@@ -13,6 +13,11 @@ def same_positions(obj1, obj2):
         return True
     return False
 
+def is_wall(tile):
+    """Zwróc True jeżeli kafelka reprezentuje ścianę.
+    """
+    return tile in r'?|.[=]#'
+
 class Board(object):
     """Plansza, na której rozgrywa się potyczka.
 
@@ -22,8 +27,13 @@ class Board(object):
       blocked_tiles  Lista kafelek, na które nie można wejść.
 
     Dozwolone typy kafelek:
+      #  ściana (samotna)
+      ?  ściana (górny kraniec)
       |  ściana (pionowa)
+      .  ściana (dolny kraniec)
+      [  ściana (lewy kraniec)
       =  ściana (pozioma)
+      ]  ściana (prawy kraniec)
       <  śliski lód (lewy kraniec)
       -  śliski lód (poziomy)
       >  śliski lód (prawy kraniec)
@@ -46,7 +56,7 @@ class Board(object):
                 tile = tiles.pop(0)
                 # Jeżeli kafelka jest ścianą, dodaj jej współrzędne do listy
                 # niedostępnych miejsc.
-                if tile in ['|', '=']:
+                if is_wall(tile):
                     self.blocked_tiles.append((x, y))
 
     def is_free_tile(self, x, y):
@@ -85,8 +95,8 @@ class Board(object):
         # Jeżeli krok skierowany jest w stronę wolnego pola i nie wykracza
         # ono poza planszę, to krok jest wykonywany.
         if self.is_free_tile(next_location_x, next_location_y):
-            if 0 < next_location_x < self.x_count - 1 \
-                    and 0 < next_location_y < self.y_count - 1:
+            if 0 <= next_location_x < self.x_count \
+                    and 0 <= next_location_y < self.y_count:
                 penguin.x = next_location_x
                 penguin.y = next_location_y
                 return True

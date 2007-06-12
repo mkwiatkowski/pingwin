@@ -156,7 +156,7 @@ class Server(Protocol):
         self.log("Sending %s message." % type(message).__name__, transport)
 
 
-def run(level_name='default', number_of_players=2, number_of_fishes=7):
+def run(level_name='default', number_of_players=3, number_of_fishes=7):
     """Uruchom serwer obsługujący grę na planszy o podanej nazwie.
     """
     Server.level_name        = level_name
