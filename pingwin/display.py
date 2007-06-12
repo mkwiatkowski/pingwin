@@ -13,6 +13,46 @@ TILE_HEIGHT = 40
 STATUS_BAR_HEIGHT = 80
 
 
+class FishSprite(pygame.sprite.Sprite):
+    def __init__(self, fish):
+        self.fish = fish
+
+        self._load_images()
+
+        self.image = self.images[fish.type]
+        self.rect = self.image.get_rect()
+
+    # Położenie pobieraj z obiektu fish.
+    def _getx(self): return self.fish.x
+    x = property(_getx)
+    def _gety(self): return self.fish.y
+    y = property(_gety)
+
+    def paint_on(self, screen):
+        """Narysuj siebie na podanym ekranie.
+        """
+        screen.blit(self.image, self._centered_coordinates())
+
+    def _centered_coordinates(self):
+        """Zwróć współrzędne, dla których obrazek rybki będzie wyśrodkowany
+        w jego aktualnym położeniu.
+        """
+        return (self.x * TILE_WIDTH,
+                self.y * TILE_HEIGHT + STATUS_BAR_HEIGHT)
+
+    def _load_images(self):
+        """Ustaw FishSprite.images, wczytując obrazki z dysku jeżeli to
+        konieczne.
+        """
+        if hasattr(FishSprite, 'images'):
+            return
+
+        FishSprite.images = [
+            load_image('fish/fish-1.gif'),
+            load_image('fish/fish-2.gif'),
+            load_image('fish/fish-3.gif'),
+            load_image('fish/fish-4.gif')]
+
 class PenguinSprite(pygame.sprite.Sprite):
     def __init__(self, penguin):
         self.penguin = penguin
@@ -120,6 +160,15 @@ class ClientDisplay(object):
 
         self._repaint()
 
+    def set_fishes(self, fishes_positions):
+        """Wyświetl rybki na ekranie.
+        """
+        self.board.set_fishes(fishes_positions)
+
+        self.fishes_sprites = [ FishSprite(fish) for fish
+                                in self.board.fishes ]
+        self._repaint()
+
     def set_penguins(self, this_penguin_id, penguins_positions):
         """Wyświetl pingwiny na ekranie i rozpocznij grę.
         """
@@ -165,6 +214,8 @@ class ClientDisplay(object):
         self._paint_text()
         if hasattr(self, 'board_surface'):
             self._paint_board()
+        if hasattr(self, 'fishes_sprites'):
+            self._paint_fishes()
         if hasattr(self, 'penguins_sprites'):
             self._paint_penguins()
         pygame.display.flip()
@@ -181,7 +232,15 @@ class ClientDisplay(object):
         self.screen.blit(textobj, textpos)
 
     def _paint_board(self):
+        """Wyświetl podłoże planszy.
+        """
         self.screen.blit(self.board_surface, (0, STATUS_BAR_HEIGHT))
+
+    def _paint_fishes(self):
+        """Wyświetl wszystkie rybki.
+        """
+        for fish in self.fishes_sprites:
+            fish.paint_on(self.screen)
 
     def _paint_penguins(self):
         """Wyświetl wszystkie pingwiny.

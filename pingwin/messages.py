@@ -54,10 +54,12 @@ class StartGameMessage(Message):
       penguin_id          identyfikator pingwina należącego do klienta
                           odbierającego tą wiadomość
       penguins_positions  początkowe pozycje wszystkich pingwinów na planszy
+      fishes_positions    rozmieszczenie rybek na planszy
     """
-    def __init__(self, penguin_id, penguins_positions):
-        self.penguin_id = penguin_id
+    def __init__(self, penguin_id, penguins_positions, fishes_positions):
+        self.penguin_id         = penguin_id
         self.penguins_positions = penguins_positions
+        self.fishes_positions   = fishes_positions
 
 class EndGameMessage(Message):
     """Komunikat oznaczający koniec gry.
@@ -70,7 +72,7 @@ class MoveOtherToMessage(Message):
     """
     def __init__(self, penguin_id, direction):
         self.penguin_id = penguin_id
-        self.direction = direction
+        self.direction  = direction
 
 ########################################################################
 # Klient -> Serwer

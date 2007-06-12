@@ -124,6 +124,7 @@ class PenguinClientProtocol(Protocol):
         elif isinstance(message, StartGameMessage):
             print "Game started by the server."
 
+            display.set_fishes(message.fishes_positions)
             display.set_penguins(message.penguin_id,
                                  message.penguins_positions)
             display.display_text("Go!")

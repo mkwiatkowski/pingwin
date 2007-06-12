@@ -2,7 +2,9 @@
 from __future__ import with_statement
 
 import random
+from itertools import cycle
 
+from fish import Fish
 from penguin import Penguin
 from helpers import level_path
 
@@ -48,6 +50,10 @@ class Board(object):
         jest wolne.
         """
         return (x, y) not in self.blocked_tiles
+
+    def set_fishes(self, fishes_positions):
+        self.fishes = [ Fish(type, *position) for type, position
+                        in zip(cycle(range(4)), fishes_positions) ]
 
     def set_penguins(self, this_penguin_id, penguins_positions):
         self.penguins = [ Penguin(id, *position) for id, position

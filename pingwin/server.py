@@ -21,9 +21,12 @@ class Server(Protocol):
       level_name         Nazwa poziomu, na którym będzie odbywać się gra.
       number_of_players  Liczba graczy, która musi się połączyć, by gra mogła
                          się rozpocząć.
+      number_of_fishes   Liczba rybek jaka zostanie początkowo umieszczona
+                         na planszy.
     """
     level_name = None
     number_of_players = None
+    number_of_fishes = None
 
     # Lista obecnie podłączonych klientów.
     connected_clients = []
@@ -50,15 +53,25 @@ class Server(Protocol):
             print "Got required number of %d players." % Server.number_of_players
             Server.game_started = True
 
-            # Zainicuj planszę i wylosuj położenia pingwinów.
+            # Zainicuj planszę.
             Server.board = ServerBoard(Server.level_name)
-            penguins_positions = Server.board.random_free_tiles(Server.number_of_players)
+
+            # Wylosuj położenia pingwinów i rybek.
+            tiles_to_allocate = Server.number_of_players + Server.number_of_fishes
+            free_tiles = Server.board.random_free_tiles(tiles_to_allocate)
+            penguins_positions = free_tiles[:Server.number_of_players]
+            fishes_positions = free_tiles[Server.number_of_players:]
+
+            # Ustaw pingwiny i rybki na planszy.
             Server.board.set_penguins(penguins_positions)
+            Server.board.set_fishes(fishes_positions)
 
             # Wyślij wiadomość o rozpoczęciu gry do każdego z klientów.
             for index, transport in enumerate(Server.connected_clients):
                 self.log("Sending start game message.", transport)
-                send(transport, StartGameMessage(index, penguins_positions))
+                send(transport, StartGameMessage(index,
+                                                 penguins_positions,
+                                                 fishes_positions))
 
     @locked
     def connectionLost(self, reason):
@@ -126,11 +139,12 @@ class Server(Protocol):
         print "#%d: %s" % (self._transport_id(transport), message)
 
 
-def run(level_name='default', number_of_players=2):
+def run(level_name='default', number_of_players=2, number_of_fishes=7):
     """Uruchom serwer obsługujący grę na planszy o podanej nazwie.
     """
     Server.level_name        = level_name
     Server.number_of_players = number_of_players
+    Server.number_of_fishes  = number_of_fishes
 
     factory = Factory()
     factory.protocol = Server
