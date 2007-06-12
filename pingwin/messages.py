@@ -81,6 +81,13 @@ class ScoreUpdateMessage(Message):
         self.penguin_id = penguin_id
         self.fish_count = fish_count
 
+class NewFishMessage(Message):
+    """Komunikat przesyłany do klientów w momencie, gdy do planszy dodano
+    nową rybkę.
+    """
+    def __init__(self, fish):
+        self.fish = fish
+
 ########################################################################
 # Klient -> Serwer
 #

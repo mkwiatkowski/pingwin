@@ -10,11 +10,11 @@ from board import ServerBoard
 from fish import Fish
 from penguin import Penguin
 from concurrency import locked
-from helpers import calculate_client_id
+from helpers import calculate_client_id, run_each
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
-    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage
+    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage
 
 
 class Server(Protocol):
@@ -27,10 +27,13 @@ class Server(Protocol):
                          się rozpocząć.
       number_of_fishes   Liczba rybek jaka zostanie początkowo umieszczona
                          na planszy.
+      new_fish_delay     Liczba sekund jaka musi upłynąć zanim zostaną dodane
+                         nowe rybki.
     """
-    level_name = None
+    level_name        = None
     number_of_players = None
-    number_of_fishes = None
+    number_of_fishes  = None
+    new_fish_delay    = None
 
     # Słownik obecnie podłączonych klientów.
     connected_clients = {}
@@ -144,6 +147,33 @@ class Server(Protocol):
         self._send_to_all(StartGameMessage(penguins, fishes))
 
         Server.game_started = True
+        self._start_adding_fishes()
+
+    def _start_adding_fishes(self):
+        """Funkcja inicjująca dodawanie co jakiś czas nowych rybek do planszy.
+        """
+        def try_to_add_a_fish():
+            # Nie dodajemy nowych rybek keżeli na planszy leży ich
+            # wystarczająca ilość.
+            if len(Server.board.fishes) >= Server.number_of_fishes:
+                return
+
+            # Wylosuj typ i położenie nowej rybki.
+            type     = Fish.random_type()
+            position = Server.board.random_unoccupied_tile()
+
+            # Utwórz rybkę i dodaj ją do planszy.
+            fish = Fish(type, *position)
+            Server.board.add_fish(fish)
+
+            # Wyślij do wszystkich klientów powiadomienie o nowej rybce.
+            self._send_to_all(NewFishMessage(fish))
+
+        def stop_condition():
+            Server.game_started is False
+
+        # Zainicjuj wykonywanie tej funkcji co Server.new_fish_delay sekund.
+        run_each(Server.new_fish_delay, try_to_add_a_fish, stop_condition)
 
     def log(self, message, transport=None):
         """Wyświetl wiadomość dotyczącą podanego (lub obecnie obsługiwanego) klienta.
@@ -156,12 +186,13 @@ class Server(Protocol):
         self.log("Sending %s message." % type(message).__name__, transport)
 
 
-def run(level_name='default', number_of_players=3, number_of_fishes=7):
+def run(level_name='default', number_of_players=2, number_of_fishes=7, new_fish_delay=2):
     """Uruchom serwer obsługujący grę na planszy o podanej nazwie.
     """
     Server.level_name        = level_name
     Server.number_of_players = number_of_players
     Server.number_of_fishes  = number_of_fishes
+    Server.new_fish_delay    = new_fish_delay
 
     factory = Factory()
     factory.protocol = Server

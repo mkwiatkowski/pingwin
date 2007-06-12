@@ -15,7 +15,7 @@ from board import Board
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
-    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage
+    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage
 
 
 # Zmienne globalne
@@ -140,6 +140,9 @@ class PenguinClientProtocol(Protocol):
 
         elif isinstance(message, ScoreUpdateMessage):
             display.update_score(message.penguin_id, message.fish_count)
+
+        elif isinstance(message, NewFishMessage):
+            display.add_fish(message.fish)
 
         # W innym wypadku po prostu wyświetl otrzymane dane.
         else:

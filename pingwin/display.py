@@ -228,6 +228,13 @@ class ClientDisplay(object):
         self.board.penguins[penguin_id].fish_count = fish_count
         self._repaint()
 
+    def add_fish(self, fish):
+        """Dodaj nową rybę na planszę.
+        """
+        self.board.add_fish(fish)
+        self.fishes_sprites.append(FishSprite(fish))
+        self._repaint()
+
     def _remove_fish_sprite(self, fish):
         for index, fish_sprite in enumerate(self.fishes_sprites):
             if fish_sprite.fish == fish:

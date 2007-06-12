@@ -18,6 +18,11 @@ def is_wall(tile):
     """
     return tile in r'?|.[=]#'
 
+def is_water(tile):
+    """Zwróc True jeżeli kafelka reprezentuje wodę.
+    """
+    return tile in r'~'
+
 class Board(object):
     """Plansza, na której rozgrywa się potyczka.
 
@@ -25,6 +30,7 @@ class Board(object):
       level_string   Ciąg znaków reprezentujący układ kafelek na planszy.
                      Patrz niżej po szczegóły dotyczące dozwolonych kafelek.
       blocked_tiles  Lista kafelek, na które nie można wejść.
+      water_tiles    Lista kafelek zawierających wodę.
 
     Dozwolone typy kafelek:
       #  ściana (samotna)
@@ -47,8 +53,9 @@ class Board(object):
     y_count = 10
 
     def __init__(self, level_name):
-        self.level_string = self._read_level(level_name)
+        self.level_string  = self._read_level(level_name)
         self.blocked_tiles = []
+        self.water_tiles   = []
 
         tiles = list(self.level_string)
         for y in range(self.y_count):
@@ -58,6 +65,8 @@ class Board(object):
                 # niedostępnych miejsc.
                 if is_wall(tile):
                     self.blocked_tiles.append((x, y))
+                elif is_water(tile):
+                    self.water_tiles.append((x, y))
 
     def is_free_tile(self, x, y):
         """Zwróc wartość prawda, jeżeli pole o podanych współrzędnych
@@ -65,11 +74,52 @@ class Board(object):
         """
         return (x, y) not in self.blocked_tiles
 
+    def is_unoccupied_tile(self, x, y):
+        """Zwróc wartość prawda, jeżeli pole o podanych współrzędnych
+        nie jest zajęte, tzn.:
+          * nie jest zablokowane (patrz is_free_tile()),
+          * nie jest kafelką z wodą (patrz is_water_tile()),
+          * nie stoi w tym miejscu - ani pingwin ani rybka.
+        """
+        if self.is_free_tile(x, y) \
+                and not self.is_water_tile(x, y) \
+                and not self.occupied_by_fish(x, y) \
+                and not self.occupied_by_penguin(x, y):
+            return True
+        return False
+
+    def is_water_tile(self, x, y):
+        """Zwróć wartość prawda, jeżeli pole o podanych współrzędnych
+        zawiera kafelkę z wodą.
+        """
+        return (x, y) in self.water_tiles
+
+    def occupied_by_fish(self, x, y):
+        """Zwróć wartość prawda, jeżeli w polu o podanych współrzędnych
+        leży rybka.
+        """
+        for fish in self.fishes:
+            if fish.x == x and fish.y == y:
+                return True
+        return False
+
+    def occupied_by_penguin(self, x, y):
+        """Zwróć wartość prawda, jeżeli w polu o podanych współrzędnych
+        stoi pingwin.
+        """
+        for penguin in self.penguins.values():
+            if penguin.x == x and penguin.y == y:
+                return True
+        return False
+
     def set_fishes(self, fishes):
         self.fishes = fishes
 
     def set_penguins(self, penguins):
         self.penguins = make_id_dict(penguins)
+
+    def add_fish(self, fish):
+        self.fishes.append(fish)
 
     def move_penguin(self, penguin_id, direction):
         """Przesuń pingwina o podanym id w zadanym kierunku.
@@ -143,4 +193,13 @@ class ServerBoard(Board):
             x = random.randrange(0, self.x_count)
             y = random.randrange(0, self.y_count)
             if self.is_free_tile(x, y):
+                return (x, y)
+
+    def random_unoccupied_tile(self):
+        """Zwróć współrzędne losowego niezajętego pola.
+        """
+        while True:
+            x = random.randrange(0, self.x_count)
+            y = random.randrange(0, self.y_count)
+            if self.is_unoccupied_tile(x, y):
                 return (x, y)

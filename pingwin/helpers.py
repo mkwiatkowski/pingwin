@@ -33,6 +33,18 @@ def run_after(duration, function):
     defered = threads.deferToThread(lambda:time.sleep(duration))
     defered.addCallback(lambda x:locked(function)())
 
+def run_each(duration, function, stop_condition):
+    """Uruchamiaj podaną funkcję co podany przedział czasu.
+
+    Gdy funkcja stop_condition() zwróci True pętla jest przerywana.
+    """
+    def call_function_and_defer():
+        function()
+        if not stop_condition():
+            run_each(duration, function, stop_condition)
+
+    run_after(duration, call_function_and_defer)
+
 #####
 # Funkcje graficzne.
 #
