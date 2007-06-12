@@ -4,8 +4,12 @@ import md5
 import os
 import time
 
+from twisted.internet import threads
+
 import pygame
 from pygame.color import Color
+
+from concurrency import locked
 
 DATA_DIR = 'data'
 
@@ -20,6 +24,14 @@ def make_id_dict(iterable, key='id', function=lambda x:x):
     for element in iterable:
         result[getattr(element, key)] = function(element)
     return result
+
+def run_after(duration, function):
+    """Uruchom podaną funkcję po upłynięciu zadanego czasu w sekundach.
+
+    Dla bezpieczeństwa funkcja jest automatycznie otaczana blokadą.
+    """
+    defered = threads.deferToThread(lambda:time.sleep(duration))
+    defered.addCallback(lambda x:locked(function)())
 
 #####
 # Funkcje graficzne.
@@ -37,6 +49,12 @@ def load_image(name):
 def level_path(name):
     return os.path.join(DATA_DIR, 'level', name)
 
+def make_text(text, x, y, size=30, color="white"):
+    font = pygame.font.Font(None, size)
+    text_object = font.render(text, 1, Color(color))
+    text_position = text_object.get_rect(x=x, y=y)
+
+    return text_object, text_position
 
 #####
 # Funkcje sieciowe.

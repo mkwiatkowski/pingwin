@@ -6,6 +6,13 @@ import random
 from helpers import make_id_dict, level_path
 
 
+def same_positions(obj1, obj2):
+    """Zwróć True jeżeli dwa obiekty są na tej samej pozycji.
+    """
+    if obj1.x == obj2.x and obj1.y == obj2.y:
+        return True
+    return False
+
 class Board(object):
     """Plansza, na której rozgrywa się potyczka.
 
@@ -83,6 +90,19 @@ class Board(object):
                 penguin.x = next_location_x
                 penguin.y = next_location_y
                 return True
+
+        return False
+
+    def penguin_ate_fish(self, penguin_id):
+        """Funkcja zwraca False jeżeli pingwin o podanym id nie stoi na
+        żadnej rybce, jeżeli stoi to zwraca obiekt tej rybki i usuwa ją
+        z listy self.fishes.
+        """
+        penguin = self.penguins[penguin_id]
+
+        for index, fish in enumerate(self.fishes):
+            if same_positions(penguin, fish):
+                return self.fishes.pop(index)
 
         return False
 

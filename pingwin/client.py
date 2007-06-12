@@ -15,7 +15,7 @@ from board import Board
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
-    MoveMeToMessage, MoveOtherToMessage
+    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage
 
 
 # Zmienne globalne
@@ -65,8 +65,6 @@ def take_action(key):
     """
     if is_movement_key(key):
         display.move_penguin(player_id, key)
-    else:
-        display.display_text("Pressed %s." % key)
 
 def end_game(reason):
     """Zakończ grę wyświetlając na ekranie powód.
@@ -131,7 +129,7 @@ class PenguinClientProtocol(Protocol):
 
             display.set_fishes(message.fishes)
             display.set_penguins(message.penguins)
-            display.display_text("Go!")
+            display.display_text("Go!", duration=1)
 
         elif isinstance(message, EndGameMessage):
             print "Game stopped by the server."
@@ -139,6 +137,9 @@ class PenguinClientProtocol(Protocol):
 
         elif isinstance(message, MoveOtherToMessage):
             display.move_penguin(message.penguin_id, message.direction)
+
+        elif isinstance(message, ScoreUpdateMessage):
+            display.update_score(message.penguin_id, message.fish_count)
 
         # W innym wypadku po prostu wyświetl otrzymane dane.
         else:

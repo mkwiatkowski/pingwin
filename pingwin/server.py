@@ -14,7 +14,7 @@ from helpers import calculate_client_id
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
-    MoveMeToMessage, MoveOtherToMessage
+    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage
 
 
 class Server(Protocol):
@@ -69,9 +69,7 @@ class Server(Protocol):
 
         # Jeżeli gra była w toku, musimy ją przerwać.
         if Server.game_started:
-            for transport in Server.connected_clients.values():
-                self.log("Sending end game message.", transport)
-                send(transport, EndGameMessage())
+            self._send_to_all(EndGameMessage())
             Server.game_started = False
 
     @locked
@@ -90,17 +88,30 @@ class Server(Protocol):
 
             # Przesuń pingwina na swojej planszy i jeżeli ruch był poprawny
             # wyślij wiadomość do pozostałych graczy.
+            client_id = self.transport.client_id
             self.log("Received moveTo(%s), sending to other." % message.direction)
-            if Server.board.move_penguin(self.transport.client_id, message.direction):
+
+            if Server.board.move_penguin(client_id, message.direction):
                 self._send_to_other(self.transport,
-                                    MoveOtherToMessage(self.transport.client_id,
+                                    MoveOtherToMessage(client_id,
                                                        message.direction))
+                if Server.board.penguin_ate_fish(client_id):
+                    new_fish_count = Server.board.penguins[client_id].eat_fish()
+                    self._send_to_all(ScoreUpdateMessage(client_id, new_fish_count))
+
+    def _send_to_all(self, message):
+        """Wyślij wiadomość do wszystkich klientów.
+        """
+        for transport in Server.connected_clients.values():
+            self.log_message(message, transport)
+            send(transport, message)
 
     def _send_to_other(self, transport, message):
         """Wyślij wiadomość do wszystkich klientów poza podanym.
         """
         for transport in Server.connected_clients.values():
             if transport.client_id != self.transport.client_id:
+                self.log_message(message, transport)
                 send(transport, message)
 
     def _init_game(self):
@@ -130,9 +141,7 @@ class Server(Protocol):
         Server.board.set_fishes(fishes)
 
         # Wyślij wiadomość o rozpoczęciu gry do każdego z klientów.
-        for transport in Server.connected_clients.values():
-            self.log("Sending start game message.", transport)
-            send(transport, StartGameMessage(penguins, fishes))
+        self._send_to_all(StartGameMessage(penguins, fishes))
 
         Server.game_started = True
 
@@ -142,6 +151,9 @@ class Server(Protocol):
         if transport is None:
             transport = self.transport
         print "#%s..: %s" % (transport.client_id[:4], message)
+
+    def log_message(self, message, transport=None):
+        self.log("Sending %s message." % type(message).__name__, transport)
 
 
 def run(level_name='default', number_of_players=2, number_of_fishes=7):

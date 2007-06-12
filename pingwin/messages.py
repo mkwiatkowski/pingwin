@@ -73,6 +73,14 @@ class MoveOtherToMessage(Message):
         self.penguin_id = penguin_id
         self.direction  = direction
 
+class ScoreUpdateMessage(Message):
+    """Komunikat przesyłany w momencie, gdy któryś z graczy zdobędzie nową
+    lub straci rybkę.
+    """
+    def __init__(self, penguin_id, fish_count):
+        self.penguin_id = penguin_id
+        self.fish_count = fish_count
+
 ########################################################################
 # Klient -> Serwer
 #

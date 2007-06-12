@@ -3,7 +3,7 @@
 import pygame
 from pygame.color import Color
 
-from helpers import make_id_dict, load_image
+from helpers import make_id_dict, load_image, make_text, run_after
 
 # Wysokość i szerokość podstawowej kafelki podłoża.
 TILE_WIDTH = 40
@@ -177,8 +177,19 @@ class ClientDisplay(object):
         self.playing = True
         self._repaint()
 
-    def display_text(self, text):
+    def display_text(self, text, duration=None):
+        """Pokaż tekst informacyjny na środku ekranu.
+        """
         self.text = text
+        self._repaint()
+
+        if duration:
+            run_after(duration, lambda: self.clear_text())
+
+    def clear_text(self):
+        """Wyczyść tekst informacyjny.
+        """
+        self.text = None
         self._repaint()
 
     def move_penguin(self, penguin_id, direction):
@@ -190,32 +201,79 @@ class ClientDisplay(object):
 
         self.board.move_penguin(penguin_id, direction)
 
+        # Przekręć pingwina w odpowiednią stronę.
         self.penguins_sprites[penguin_id].turn(direction)
+
+        # Jeżeli pingwin stanął na polu z rybką, rybka powinna zniknąć.
+        fish = self.board.penguin_ate_fish(penguin_id)
+        if fish:
+            self._remove_fish_sprite(fish)
+
         self._repaint()
+
+    def update_score(self, penguin_id, fish_count):
+        """Uaktualnij wynik gracza i wyświetl go na ekranie.
+        """
+        self.board.penguins[penguin_id].fish_count = fish_count
+        self._repaint()
+
+    def _remove_fish_sprite(self, fish):
+        for index, fish_sprite in enumerate(self.fishes_sprites):
+            if fish_sprite.fish == fish:
+                self.fishes_sprites.pop(index)
+                return
 
     def _repaint(self):
         """Przerysuj cały ekran.
         """
         self._paint_status_bar()
-        self._paint_text()
         if hasattr(self, 'board_surface'):
             self._paint_board()
         if hasattr(self, 'fishes_sprites'):
             self._paint_fishes()
         if hasattr(self, 'penguins_sprites'):
             self._paint_penguins()
+        if self.text:
+            self._paint_text()
         pygame.display.flip()
 
     def _paint_status_bar(self):
+        """Przerysuj pasek stanu, nanosząc aktualne wyniki graczy.
+        """
+        # Nanieś czarne tło. XXX nałożyć ładną bitmapę
         status_bar = pygame.Surface((self.width, STATUS_BAR_HEIGHT))
         self.screen.blit(status_bar, (0,0))
 
+        if not self.playing:
+            return
+
+        initial_x = 15
+        if len(self.board.penguins) <= 4:
+            x_step = 305
+        elif len(self.board.penguins) <= 6:
+            x_step = 207
+        else:
+            pass # XXX zrobić inny układ
+
+        x = initial_x
+        y = 10
+        for index, penguin in enumerate(self.board.penguins.values()):
+            text = "Player %d  (%d)" % (index + 1, penguin.fish_count)
+            self._blit_text(text, x, y, color=penguin.color)
+
+            x += x_step
+            if x + x_step > self.width:
+                x = initial_x
+                y = 45
+
     def _paint_text(self):
         font = pygame.font.Font(None, 36)
-        textobj = font.render(self.text, 1, Color("white"))
-        textpos = textobj.get_rect(x=50, y=50)
+        text = font.render(self.text, 1, Color("yellow"), Color("black"))
 
-        self.screen.blit(textobj, textpos)
+        x = (self.width - text.get_width()) / 2
+        y = (self.height - text.get_height()) / 2
+
+        self.screen.blit(text, text.get_rect(x=x, y=y))
 
     def _paint_board(self):
         """Wyświetl podłoże planszy.
@@ -236,3 +294,6 @@ class ClientDisplay(object):
             assert 0 <= penguin.y < self.board.y_count
 
             penguin.paint_on(self.screen)
+
+    def _blit_text(self, *args, **kwds):
+        self.screen.blit(*make_text(*args, **kwds))

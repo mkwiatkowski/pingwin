@@ -21,10 +21,10 @@ def locked(function):
     blokade niezależnie od sposobu zakończenia wykonania funkcji
     - może to być zarówno normalny powrót, jak i rzucenie wyjątku.
     """
-    def locked_function(*args):
+    def locked_function(*args, **kwds):
         lock()
         try:
-            function(*args)
+            function(*args, **kwds)
         finally:
             unlock()
     return locked_function
