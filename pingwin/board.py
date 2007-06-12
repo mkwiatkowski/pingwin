@@ -2,11 +2,8 @@
 from __future__ import with_statement
 
 import random
-from itertools import cycle
 
-from fish import Fish
-from penguin import Penguin
-from helpers import level_path
+from helpers import make_id_dict, level_path
 
 
 class Board(object):
@@ -51,21 +48,20 @@ class Board(object):
         """
         return (x, y) not in self.blocked_tiles
 
-    def set_fishes(self, fishes_positions):
-        self.fishes = [ Fish(type, *position) for type, position
-                        in zip(cycle(range(4)), fishes_positions) ]
+    def set_fishes(self, fishes):
+        self.fishes = fishes
 
-    def set_penguins(self, this_penguin_id, penguins_positions):
-        self.penguins = [ Penguin(id, *position) for id, position
-                          in enumerate(penguins_positions) ]
-        self.this_penguin = self.penguins[this_penguin_id]
+    def set_penguins(self, penguins):
+        self.penguins = make_id_dict(penguins)
 
-    def move_penguin(self, penguin, direction):
-        """Przesuń danego pingwina w podanym kierunku.
+    def move_penguin(self, penguin_id, direction):
+        """Przesuń pingwina o podanym id w zadanym kierunku.
 
         Zwraca True jeżeli ruch był możliwy, False w przeciwnym wypadku.
         """
         assert direction in ["Up", "Down", "Right", "Left"]
+
+        penguin = self.penguins[penguin_id]
 
         next_location_x = penguin.x
         next_location_y = penguin.y
@@ -118,7 +114,3 @@ class ServerBoard(Board):
             y = random.randrange(0, self.y_count)
             if self.is_free_tile(x, y):
                 return (x, y)
-
-    def set_penguins(self, penguins_positions):
-        self.penguins = [ Penguin(id, *position) for id, position
-                          in enumerate(penguins_positions) ]

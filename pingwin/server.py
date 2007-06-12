@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 
+from itertools import cycle
+
 from twisted.internet.protocol import Factory
 from twisted.internet.protocol import Protocol
 from twisted.internet import reactor
 
 from board import ServerBoard
+from fish import Fish
 from penguin import Penguin
 from concurrency import locked
+from helpers import calculate_client_id
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
@@ -28,8 +32,8 @@ class Server(Protocol):
     number_of_players = None
     number_of_fishes = None
 
-    # Lista obecnie podłączonych klientów.
-    connected_clients = []
+    # Słownik obecnie podłączonych klientów.
+    connected_clients = {}
     # Flaga określająca, czy gra zawiera już wystarczającą liczbę graczy.
     game_started = False
     # Obiekt typu ServerBoard określający obecny stan planszy.
@@ -37,16 +41,20 @@ class Server(Protocol):
 
     @locked
     def connectionMade(self):
+        # Wygeneruj unikalny identyfikator klienta i zapamiętaj go.
+        client_id = calculate_client_id(self.transport)
+        self.transport.client_id = client_id
+
         if Server.game_started:
             self.log("Client rejected, server full.")
             self.transport.loseConnection()
             return
 
         self.log("Client connected from address %s." % self.transport.getPeer())
-        Server.connected_clients.append(self.transport)
+        Server.connected_clients[client_id] = self.transport
 
         # Wyślij wiadomość przywitalną z nazwą planszy.
-        send(self.transport, WelcomeMessage(Server.level_name))
+        send(self.transport, WelcomeMessage(client_id, Server.level_name))
 
         # Rozpocznij grę jeżeli połączyła się wystarczająca liczba graczy.
         if len(Server.connected_clients) == Server.number_of_players:
@@ -57,30 +65,37 @@ class Server(Protocol):
             Server.board = ServerBoard(Server.level_name)
 
             # Wylosuj położenia pingwinów i rybek.
-            tiles_to_allocate = Server.number_of_players + Server.number_of_fishes
-            free_tiles = Server.board.random_free_tiles(tiles_to_allocate)
+            tiles_to_allocate  = Server.number_of_players + Server.number_of_fishes
+            free_tiles         = Server.board.random_free_tiles(tiles_to_allocate)
             penguins_positions = free_tiles[:Server.number_of_players]
-            fishes_positions = free_tiles[Server.number_of_players:]
+            fishes_positions   = free_tiles[Server.number_of_players:]
 
-            # Ustaw pingwiny i rybki na planszy.
-            Server.board.set_penguins(penguins_positions)
-            Server.board.set_fishes(fishes_positions)
+            # Ustaw pingwiny na planszy.
+            penguins = []
+            for client_id, position in zip(Server.connected_clients.keys(),
+                                           penguins_positions):
+                penguins.append(Penguin(client_id, *position))
+            Server.board.set_penguins(penguins)
+
+            # Ustaw rybki na planszy.
+            fishes = []
+            for type, position in zip(cycle(range(4)), fishes_positions):
+                fishes.append(Fish(type, *position))
+            Server.board.set_fishes(fishes)
 
             # Wyślij wiadomość o rozpoczęciu gry do każdego z klientów.
-            for index, transport in enumerate(Server.connected_clients):
+            for transport in Server.connected_clients.values():
                 self.log("Sending start game message.", transport)
-                send(transport, StartGameMessage(index,
-                                                 penguins_positions,
-                                                 fishes_positions))
+                send(transport, StartGameMessage(penguins, fishes))
 
     @locked
     def connectionLost(self, reason):
         self.log("Client disconnected.")
-        Server.connected_clients.remove(self.transport)
+        Server.connected_clients.pop(self.transport.client_id)
 
         # Jeżeli gra była w toku, musimy ją przerwać.
         if Server.game_started:
-            for transport in Server.connected_clients:
+            for transport in Server.connected_clients.values():
                 self.log("Sending end game message.", transport)
                 send(transport, EndGameMessage())
 
@@ -101,42 +116,24 @@ class Server(Protocol):
             # Przesuń pingwina na swojej planszy i jeżeli ruch był poprawny
             # wyślij wiadomość do pozostałych graczy.
             self.log("Received moveTo(%s), sending to other." % message.direction)
-            penguin = self._current_penguin()
-            if Server.board.move_penguin(penguin, message.direction):
+            if Server.board.move_penguin(self.transport.client_id, message.direction):
                 self._send_to_other(self.transport,
-                                    MoveOtherToMessage(penguin.id,
+                                    MoveOtherToMessage(self.transport.client_id,
                                                        message.direction))
-
-    def _current_penguin(self):
-        """Zwróć pingwina związanego z obecnym połączeniem.
-        """
-        return Server.board.penguins[self._current_id()]
-
-    def _current_id(self):
-        """Identyfikator tego połączenia.
-        """
-        return self._transport_id(self.transport)
-
-    def _transport_id(self, transport):
-        """Identyfikator połączenia związanego z danym transportem.
-        """
-        # XXX Głupie, ale na razie wystarczy.
-        try:
-            return Server.connected_clients.index(transport)
-        except ValueError:
-            return len(Server.connected_clients)
 
     def _send_to_other(self, transport, message):
         """Wyślij wiadomość do wszystkich klientów poza podanym.
         """
-        for transport in Server.connected_clients:
-            if transport != self.transport:
+        for transport in Server.connected_clients.values():
+            if transport.client_id != self.transport.client_id:
                 send(transport, message)
 
     def log(self, message, transport=None):
+        """Wyświetl wiadomość dotyczącą podanego (lub obecnie obsługiwanego) klienta.
+        """
         if transport is None:
             transport = self.transport
-        print "#%d: %s" % (self._transport_id(transport), message)
+        print "#%s: %s" % (transport.client_id, message)
 
 
 def run(level_name='default', number_of_players=2, number_of_fishes=7):

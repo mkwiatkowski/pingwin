@@ -41,9 +41,11 @@ class WelcomeMessage(Message):
     połączenia.
 
     Atrybuty:
+      player_id   identyfikator przypisany graczowi przez serwer
       level_name  nazwa poziomu, jaki klient powinien wczytać
     """
-    def __init__(self, level_name):
+    def __init__(self, player_id, level_name):
+        self.player_id  = player_id
         self.level_name = level_name
 
 class StartGameMessage(Message):
@@ -51,15 +53,12 @@ class StartGameMessage(Message):
     rozgrywki.
 
     Atrybuty:
-      penguin_id          identyfikator pingwina należącego do klienta
-                          odbierającego tą wiadomość
-      penguins_positions  początkowe pozycje wszystkich pingwinów na planszy
-      fishes_positions    rozmieszczenie rybek na planszy
+      penguins  lista pingwinów uczestnicących w grze
+      fishes    lista rybek początkowo leżących na planszy
     """
-    def __init__(self, penguin_id, penguins_positions, fishes_positions):
-        self.penguin_id         = penguin_id
-        self.penguins_positions = penguins_positions
-        self.fishes_positions   = fishes_positions
+    def __init__(self, penguins, fishes):
+        self.penguins = penguins
+        self.fishes   = fishes
 
 class EndGameMessage(Message):
     """Komunikat oznaczający koniec gry.

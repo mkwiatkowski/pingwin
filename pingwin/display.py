@@ -3,7 +3,7 @@
 import pygame
 from pygame.color import Color
 
-from helpers import load_image
+from helpers import make_id_dict, load_image
 
 # Wysokość i szerokość podstawowej kafelki podłoża.
 TILE_WIDTH = 40
@@ -160,51 +160,37 @@ class ClientDisplay(object):
 
         self._repaint()
 
-    def set_fishes(self, fishes_positions):
+    def set_fishes(self, fishes):
         """Wyświetl rybki na ekranie.
         """
-        self.board.set_fishes(fishes_positions)
-
-        self.fishes_sprites = [ FishSprite(fish) for fish
-                                in self.board.fishes ]
+        self.board.set_fishes(fishes)
+        self.fishes_sprites = [ FishSprite(fish) for fish in fishes ]
         self._repaint()
 
-    def set_penguins(self, this_penguin_id, penguins_positions):
+    def set_penguins(self, penguins):
         """Wyświetl pingwiny na ekranie i rozpocznij grę.
         """
-        self.board.set_penguins(this_penguin_id, penguins_positions)
+        self.board.set_penguins(penguins)
 
-        self.penguins_sprites = [ PenguinSprite(penguin) for penguin
-                                  in self.board.penguins ]
-        self.this_penguin_sprite = self.penguins_sprites[this_penguin_id]
+        self.penguins_sprites = make_id_dict(penguins, function=PenguinSprite)
 
         self.playing = True
-
         self._repaint()
 
     def display_text(self, text):
         self.text = text
         self._repaint()
 
-    def move_this_penguin(self, direction):
-        """Przesuń pingwina w podanym kierunku.
+    def move_penguin(self, penguin_id, direction):
+        """Przesuń pingwina o podanym id w zadanym kierunku.
         """
         if not self.playing:
             return
-
-        self.move_penguin(self.board.this_penguin, direction)
-
-    def move_penguin(self, penguin, direction):
-        """Przesuń danego pingwina w podanym kierunku.
-        """
-        if not self.playing:
-            return
-
         assert direction in ["Up", "Down", "Right", "Left"]
 
-        self.board.move_penguin(penguin, direction)
+        self.board.move_penguin(penguin_id, direction)
 
-        self.penguins_sprites[penguin.id].turn(direction)
+        self.penguins_sprites[penguin_id].turn(direction)
         self._repaint()
 
     def _repaint(self):
@@ -245,7 +231,7 @@ class ClientDisplay(object):
     def _paint_penguins(self):
         """Wyświetl wszystkie pingwiny.
         """
-        for penguin in self.penguins_sprites:
+        for penguin in self.penguins_sprites.values():
             assert 0 <= penguin.x < self.board.x_count
             assert 0 <= penguin.y < self.board.y_count
 

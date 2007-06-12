@@ -20,6 +20,7 @@ from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
 
 # Zmienne globalne
 board        = None
+player_id    = None
 display      = None
 
 
@@ -63,13 +64,14 @@ def take_action(key):
     """Podejmij odpowiednią akcję na podstawie wciśniętego klawisza.
     """
     if is_movement_key(key):
-        display.move_this_penguin(key)
+        display.move_penguin(player_id, key)
     else:
         display.display_text("Pressed %s." % key)
 
 def end_game(reason):
     """Zakończ grę wyświetlając na ekranie powód.
     """
+    print reason
     display.display_text(reason)
     time.sleep(2)
     os._exit(1)
@@ -117,6 +119,9 @@ class PenguinClientProtocol(Protocol):
             global board
             board = Board(message.level_name)
 
+            global player_id
+            player_id = message.player_id
+
             display.set_board(board)
             display.display_text("Waiting for other players to join...")
 
@@ -124,9 +129,8 @@ class PenguinClientProtocol(Protocol):
         elif isinstance(message, StartGameMessage):
             print "Game started by the server."
 
-            display.set_fishes(message.fishes_positions)
-            display.set_penguins(message.penguin_id,
-                                 message.penguins_positions)
+            display.set_fishes(message.fishes)
+            display.set_penguins(message.penguins)
             display.display_text("Go!")
 
         elif isinstance(message, EndGameMessage):
@@ -134,8 +138,7 @@ class PenguinClientProtocol(Protocol):
             end_game("Game over.")
 
         elif isinstance(message, MoveOtherToMessage):
-            display.move_penguin(board.penguins[message.penguin_id],
-                                 message.direction)
+            display.move_penguin(message.penguin_id, message.direction)
 
         # W innym wypadku po prostu wyświetl otrzymane dane.
         else:
