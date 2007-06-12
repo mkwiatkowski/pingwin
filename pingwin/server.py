@@ -59,34 +59,8 @@ class Server(Protocol):
         # Rozpocznij grę jeżeli połączyła się wystarczająca liczba graczy.
         if len(Server.connected_clients) == Server.number_of_players:
             print "Got required number of %d players." % Server.number_of_players
-            Server.game_started = True
 
-            # Zainicuj planszę.
-            Server.board = ServerBoard(Server.level_name)
-
-            # Wylosuj położenia pingwinów i rybek.
-            tiles_to_allocate  = Server.number_of_players + Server.number_of_fishes
-            free_tiles         = Server.board.random_free_tiles(tiles_to_allocate)
-            penguins_positions = free_tiles[:Server.number_of_players]
-            fishes_positions   = free_tiles[Server.number_of_players:]
-
-            # Ustaw pingwiny na planszy.
-            penguins = []
-            for client_id, position in zip(Server.connected_clients.keys(),
-                                           penguins_positions):
-                penguins.append(Penguin(client_id, *position))
-            Server.board.set_penguins(penguins)
-
-            # Ustaw rybki na planszy.
-            fishes = []
-            for type, position in zip(cycle(range(4)), fishes_positions):
-                fishes.append(Fish(type, *position))
-            Server.board.set_fishes(fishes)
-
-            # Wyślij wiadomość o rozpoczęciu gry do każdego z klientów.
-            for transport in Server.connected_clients.values():
-                self.log("Sending start game message.", transport)
-                send(transport, StartGameMessage(penguins, fishes))
+            self._init_game()
 
     @locked
     def connectionLost(self, reason):
@@ -127,6 +101,39 @@ class Server(Protocol):
         for transport in Server.connected_clients.values():
             if transport.client_id != self.transport.client_id:
                 send(transport, message)
+
+    def _init_game(self):
+        """Zainicjuj wszystkie potrzebne struktury i rozpocznij grę wysyłając
+        wszystkim graczom komunikat StartGameMessage.
+        """
+        # Zainicuj planszę.
+        Server.board = ServerBoard(Server.level_name)
+
+        # Wylosuj położenia pingwinów i rybek.
+        tiles_to_allocate  = Server.number_of_players + Server.number_of_fishes
+        free_tiles         = Server.board.random_free_tiles(tiles_to_allocate)
+        penguins_positions = free_tiles[:Server.number_of_players]
+        fishes_positions   = free_tiles[Server.number_of_players:]
+
+        # Ustaw pingwiny na planszy.
+        penguins = []
+        for client_id, position in zip(Server.connected_clients.keys(),
+                                       penguins_positions):
+            penguins.append(Penguin(client_id, *position))
+        Server.board.set_penguins(penguins)
+
+        # Ustaw rybki na planszy.
+        fishes = []
+        for type, position in zip(cycle(range(4)), fishes_positions):
+            fishes.append(Fish(type, *position))
+        Server.board.set_fishes(fishes)
+
+        # Wyślij wiadomość o rozpoczęciu gry do każdego z klientów.
+        for transport in Server.connected_clients.values():
+            self.log("Sending start game message.", transport)
+            send(transport, StartGameMessage(penguins, fishes))
+
+        Server.game_started = True
 
     def log(self, message, transport=None):
         """Wyświetl wiadomość dotyczącą podanego (lub obecnie obsługiwanego) klienta.
