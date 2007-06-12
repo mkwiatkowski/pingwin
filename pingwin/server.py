@@ -6,6 +6,7 @@ from twisted.internet import reactor
 
 from board import ServerBoard
 from penguin import Penguin
+from concurrency import locked
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
@@ -31,9 +32,8 @@ class Server(Protocol):
     # Obiekt typu ServerBoard określający obecny stan planszy.
     board = None
 
+    @locked
     def connectionMade(self):
-        # XXX: użyć wokół całej funkcji locka.
-
         if Server.game_started:
             self.log("Client rejected, server full.")
             self.transport.loseConnection()
@@ -60,6 +60,7 @@ class Server(Protocol):
                 self.log("Sending start game message.", transport)
                 send(transport, StartGameMessage(index, penguins_positions))
 
+    @locked
     def connectionLost(self, reason):
         self.log("Client disconnected.")
         Server.connected_clients.remove(self.transport)
@@ -70,6 +71,7 @@ class Server(Protocol):
                 self.log("Sending end game message.", transport)
                 send(transport, EndGameMessage())
 
+    @locked
     def dataReceived(self, data):
         """Funkcja wywoływana zawsze, gdy otrzymamy dane od któregoś z klientów.
         """
