@@ -33,6 +33,9 @@ def deserialize(string):
 class Message(object):
     pass
 
+########################################################################
+# Serwer -> Klient
+#
 class WelcomeMessage(Message):
     """Komunikat wysyłany przez serwer do klienta zaraz po nawiązaniu
     połączenia.
@@ -60,3 +63,21 @@ class EndGameMessage(Message):
     """Komunikat oznaczający koniec gry.
     """
     pass
+
+class MoveOtherToMessage(Message):
+    """Komunikat przesyłany z serwera informujący innych graczy o ruchu
+    jednego z nich w podanym kierunku.
+    """
+    def __init__(self, penguin_id, direction):
+        self.penguin_id = penguin_id
+        self.direction = direction
+
+########################################################################
+# Klient -> Serwer
+#
+class MoveMeToMessage(Message):
+    """Komunikat wysyłany przez klienta do serwera informujący o przesunięciu
+    pingwina w jednym z czterech dozwolonych kierunków (Up/Down/Right/Left).
+    """
+    def __init__(self, direction):
+        self.direction = direction

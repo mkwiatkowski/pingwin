@@ -12,8 +12,15 @@ import pygame
 
 from display import ClientDisplay
 from board import Board
+
 from messages import send, receive
-from messages import WelcomeMessage, StartGameMessage, EndGameMessage
+from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
+    MoveMeToMessage, MoveOtherToMessage
+
+
+# Zmienne globalne
+board        = None
+display      = None
 
 
 def get_text_input():
@@ -32,6 +39,8 @@ def get_text_input():
             elif event.key == pygame.K_LEFT:   return "Left"
             elif 97 <= event.key <= 122:       return chr(event.key)
 
+def is_movement_key(key):
+    return key in ["Up", "Down", "Right", "Left"]
 
 def wait_many_times(on, then):
     """Czekaj aż `on` zwróci wartość, wywołaj `then` i czekaj ponownie.
@@ -53,8 +62,8 @@ def wait_many_times(on, then):
 def take_action(key):
     """Podejmij odpowiednią akcję na podstawie wciśniętego klawisza.
     """
-    if key in ["Up", "Down", "Right", "Left"]:
-        display.move_penguin(key)
+    if is_movement_key(key):
+        display.move_this_penguin(key)
     else:
         display.display_text("Pressed %s." % key)
 
@@ -75,16 +84,15 @@ class PenguinClientProtocol(Protocol):
         Tutaj inicjowana jest pętla wait_many_times() działająca na funkcji
         get_text_input() pozwalając użytkownikowi na interakcję z klawiatury.
         """
-        def send_to_server_or_exit(data):
+        def take_action_and_send(data):
+            take_action(data)
+
             # Zakończ program, gdy użytkownik o to prosi.
             if data == "Quit":
                 end_game("User quit.")
-
-            send(self.transport, data)
-
-        def take_action_and_send(data):
-            take_action(data)
-            send_to_server_or_exit(data)
+            # Informację o przesunięciu prześlij do serwera.
+            elif is_movement_key(data):
+                send(self.transport, MoveMeToMessage(data))
 
         display.display_text("Connected to server, loading board...")
 
@@ -102,24 +110,32 @@ class PenguinClientProtocol(Protocol):
             self._processMessage(message)
 
     def _processMessage(self, message):
-        """Zareaguj na wiadomość.
-        """
         # Pobierz nazwę planszy od serwera, wczytaj ją i pokaż na ekranie.
         if isinstance(message, WelcomeMessage):
             print "Got welcome message from the server."
+
             global board
             board = Board(message.level_name)
-            display.display_board(board)
+
+            display.set_board(board)
             display.display_text("Waiting for other players to join...")
+
         # Wyświetl pigwiny w pozycjach podanych przez serwer i rozpocznij grę.
         elif isinstance(message, StartGameMessage):
             print "Game started by the server."
-            display.display_penguins(message.penguin_id,
-                                     message.penguins_positions)
+
+            display.set_penguins(message.penguin_id,
+                                 message.penguins_positions)
             display.display_text("Go!")
+
         elif isinstance(message, EndGameMessage):
             print "Game stopped by the server."
             end_game("Game over.")
+
+        elif isinstance(message, MoveOtherToMessage):
+            display.move_penguin(board.penguins[message.penguin_id],
+                                 message.direction)
+
         # W innym wypadku po prostu wyświetl otrzymane dane.
         else:
             print "Received %s." % message
@@ -135,7 +151,6 @@ class ClientConnection(object):
 
 def run():
     global display
-    global connection
 
     display = ClientDisplay()
     display.display_text("Connecting to server...")

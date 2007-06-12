@@ -3,6 +3,7 @@ from __future__ import with_statement
 
 import random
 
+from penguin import Penguin
 from helpers import level_path
 
 
@@ -48,6 +49,41 @@ class Board(object):
         """
         return (x, y) not in self.blocked_tiles
 
+    def set_penguins(self, this_penguin_id, penguins_positions):
+        self.penguins = [ Penguin(id, *position) for id, position
+                          in enumerate(penguins_positions) ]
+        self.this_penguin = self.penguins[this_penguin_id]
+
+    def move_penguin(self, penguin, direction):
+        """Przesuń danego pingwina w podanym kierunku.
+
+        Zwraca True jeżeli ruch był możliwy, False w przeciwnym wypadku.
+        """
+        assert direction in ["Up", "Down", "Right", "Left"]
+
+        next_location_x = penguin.x
+        next_location_y = penguin.y
+
+        if direction == "Up":
+            next_location_y -= 1
+        elif direction == "Down":
+            next_location_y += 1
+        elif direction == "Right":
+            next_location_x += 1
+        elif direction == "Left":
+            next_location_x -= 1
+
+        # Jeżeli krok skierowany jest w stronę wolnego pola i nie wykracza
+        # ono poza planszę, to krok jest wykonywany.
+        if self.is_free_tile(next_location_x, next_location_y):
+            if 0 < next_location_x < self.x_count - 1 \
+                    and 0 < next_location_y < self.y_count - 1:
+                penguin.x = next_location_x
+                penguin.y = next_location_y
+                return True
+
+        return False
+
     def _read_level(self, name):
         """Odczytaj dane poziomu o podanej nazwie.
         """
@@ -76,3 +112,7 @@ class ServerBoard(Board):
             y = random.randrange(0, self.y_count)
             if self.is_free_tile(x, y):
                 return (x, y)
+
+    def set_penguins(self, penguins_positions):
+        self.penguins = [ Penguin(id, *position) for id, position
+                          in enumerate(penguins_positions) ]
