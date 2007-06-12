@@ -20,8 +20,8 @@ class PenguinSprite(pygame.sprite.Sprite):
         id = 1 # penguin.id XXX we need more images
         pygame.sprite.Sprite.__init__(self)
         self.images = {
-            'Up':    load_image('penguin/penguin-%d-right.gif' % id), # XXX
-            'Down':  load_image('penguin/penguin-%d-right.gif' % id), # XXX
+            'Up':    load_image('penguin/penguin-%d-back.gif' % id),
+            'Down':  load_image('penguin/penguin-%d-front.gif' % id),
             'Right': load_image('penguin/penguin-%d-right.gif' % id),
             'Left':  load_image('penguin/penguin-%d-left.gif' % id)}
 
