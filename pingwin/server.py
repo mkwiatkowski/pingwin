@@ -72,6 +72,7 @@ class Server(Protocol):
             for transport in Server.connected_clients.values():
                 self.log("Sending end game message.", transport)
                 send(transport, EndGameMessage())
+            Server.game_started = False
 
     @locked
     def dataReceived(self, data):
@@ -140,7 +141,7 @@ class Server(Protocol):
         """
         if transport is None:
             transport = self.transport
-        print "#%s: %s" % (transport.client_id, message)
+        print "#%s..: %s" % (transport.client_id[:4], message)
 
 
 def run(level_name='default', number_of_players=2, number_of_fishes=7):
