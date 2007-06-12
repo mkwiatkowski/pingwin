@@ -106,10 +106,10 @@ class Server(Protocol):
         """Identyfikator połączenia związanego z danym transportem.
         """
         # XXX Głupie, ale na razie wystarczy.
-        for id, current_transport in enumerate(Server.connected_clients):
-            if current_transport == transport:
-                return id
-        return len(Server.connected_clients)
+        try:
+            return Server.connected_clients.index(transport)
+        except ValueError:
+            return len(Server.connected_clients)
 
     def _send_to_other(self, transport, message):
         """Wyślij wiadomość do wszystkich klientów poza podanym.
