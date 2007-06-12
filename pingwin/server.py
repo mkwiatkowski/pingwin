@@ -126,9 +126,9 @@ class Server(Protocol):
 
         # Wylosuj położenia pingwinów i rybek.
         tiles_to_allocate  = Server.number_of_players + Server.number_of_fishes
-        free_tiles         = Server.board.random_free_tiles(tiles_to_allocate)
-        penguins_positions = free_tiles[:Server.number_of_players]
-        fishes_positions   = free_tiles[Server.number_of_players:]
+        unoccupied_tiles   = Server.board.random_unoccupied_tiles(tiles_to_allocate)
+        penguins_positions = unoccupied_tiles[:Server.number_of_players]
+        fishes_positions   = unoccupied_tiles[Server.number_of_players:]
 
         # Ustaw pingwiny na planszy.
         penguins = []

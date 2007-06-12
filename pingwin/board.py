@@ -54,6 +54,10 @@ class Board(object):
 
     def __init__(self, level_name):
         self.level_string  = self._read_level(level_name)
+
+        self.fishes   = []
+        self.penguins = {}
+
         self.blocked_tiles = []
         self.water_tiles   = []
 
@@ -176,24 +180,15 @@ class Board(object):
 class ServerBoard(Board):
     """Plansza z metodami przydatnymi dla serwera.
     """
-    def random_free_tiles(self, number):
-        """Zwróć podaną liczbę wolnych losowych pól.
+    def random_unoccupied_tiles(self, number):
+        """Zwróć podaną liczbę niezajętych pól.
         """
         tiles = []
         while len(tiles) != number:
-            tile = self.random_free_tile()
+            tile = self.random_unoccupied_tile()
             if tile not in tiles:
                 tiles.append(tile)
         return tiles
-
-    def random_free_tile(self):
-        """Zwróć współrzędne losowego wolnego pola.
-        """
-        while True:
-            x = random.randrange(0, self.x_count)
-            y = random.randrange(0, self.y_count)
-            if self.is_free_tile(x, y):
-                return (x, y)
 
     def random_unoccupied_tile(self):
         """Zwróć współrzędne losowego niezajętego pola.
