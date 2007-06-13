@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 import time
 
 from twisted.internet.protocol import ClientFactory
@@ -194,21 +195,26 @@ class PenguinClientProtocol(Protocol):
 class ClientConnection(object):
     """Klasa inicująca połączenie z serwerem.
     """
-    def __init__(self):
+    def __init__(self, server_address):
         factory = ClientFactory()
         factory.protocol = PenguinClientProtocol
-        reactor.connectTCP("localhost", 8888, factory)
+        reactor.connectTCP(server_address, 8888, factory)
 
 
-def run():
+def run(server_address):
     global display
 
     display = ClientDisplay()
     display.display_text("Connecting to server...")
-    connection = ClientConnection()
+    connection = ClientConnection(server_address)
 
     # Oddajemy sterowanie do głównej pętli biblioteki Twisted.
     reactor.run()
 
 if __name__ == '__main__':
-    run()
+    try:
+        server_address = sys.argv[1]
+    except:
+        print "usage: %s server_address" % sys.argv[0]
+
+    run(server_address)

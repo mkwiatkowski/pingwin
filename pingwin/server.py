@@ -3,6 +3,7 @@
 import signal
 import time
 import os
+import sys
 
 from itertools import cycle
 
@@ -258,4 +259,11 @@ def run(level_name='default', number_of_players=2, number_of_fishes=7,
     reactor.run()
 
 if __name__ == '__main__':
-    run()
+    try:
+        number_of_players = int(sys.argv[1])
+        game_duration     = int(sys.argv[2])
+    except:
+        print "usage: %s number_of_players game_duration" % sys.argv[0]
+        sys.exit()
+
+    run(number_of_players=number_of_players, game_duration=game_duration)
