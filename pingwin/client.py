@@ -16,10 +16,7 @@ from display import ClientDisplay
 from board import Board
 from helpers import run_after
 
-from messages import send, receive
-from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
-    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage,\
-    RiseGameDurationMessage, TurnMeToMessage, TurnOtherToMessage
+from messages import *
 
 # Blokada dla wszystkich funkcji klienta.
 client_lock = create_lock()
@@ -184,6 +181,11 @@ class PenguinClientProtocol(Protocol):
 
         elif isinstance(message, ScoreUpdateMessage):
             display.update_score(message.penguin_id, message.fish_count)
+
+        # Jeżeli pingwin wpadł do wody to zamigotaj nim przez chwilę.
+        elif isinstance(message, PositionUpdateMessage):
+            board.update_penguin_position(message.penguin_id, message.x, message.y)
+            display.blink_penguin(message.penguin_id)
 
         elif isinstance(message, NewFishMessage):
             display.add_fish(message.fish)

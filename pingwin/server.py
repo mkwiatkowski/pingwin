@@ -17,10 +17,7 @@ from penguin import Penguin
 from concurrency import locked, create_lock
 from helpers import calculate_client_id, run_each, run_after
 
-from messages import send, receive
-from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
-    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage,\
-    RiseGameDurationMessage, TurnMeToMessage, TurnOtherToMessage
+from messages import *
 
 # Blokada dla wszystkich funkcji serwera.
 server_lock = create_lock()
@@ -106,11 +103,25 @@ class Server(Protocol):
 
             if Server.board.move_penguin(client_id, message.direction):
                 self._send_to_other(MoveOtherToMessage(client_id, message.direction))
+
+                # Jezeli pingwin zdobył rybkę, wyślij do wszystkich
+                # uaktualnienie wyniku.
                 if Server.board.penguin_ate_fish(client_id):
                     new_fish_count = Server.board.penguins[client_id].eat_fish()
                     self._send_to_all(ScoreUpdateMessage(client_id, new_fish_count))
 
-                # Server.board.move_penguin ustawiło flagę 'moving', zwolnij ją
+                # Jeżeli pingwin wpadł do wody, wylosuj dla niego nowe
+                # położenie i do wszystkich wyślij uaktualnienia położenia
+                # i wyniku.
+                elif Server.board.penguin_dropped_into_water(client_id):
+                    new_fish_count = Server.board.penguins[client_id].drop_into_water()
+                    position = Server.board.random_unoccupied_tile()
+                    Server.board.update_penguin_position(client_id, *position)
+
+                    self._send_to_all(PositionUpdateMessage(client_id, *position))
+                    self._send_to_all(ScoreUpdateMessage(client_id, new_fish_count))
+
+                # Server.board.move_penguin() ustawiło flagę 'moving', zwolnij ją
                 # po 0.1 sekundy (zapezpiecza przed botami).
                 run_after(0.1, locked(server_lock)(lambda: Server.board.penguins[client_id].stop()))
             else:

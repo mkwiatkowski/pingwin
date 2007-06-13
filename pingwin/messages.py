@@ -4,6 +4,21 @@ import pickle
 
 END_OF_MESSAGE = '\0'
 
+# Lista eksportowanych symboli.
+__all__ = ['send',
+           'receive',
+           'WelcomeMessage',
+           'StartGameMessage',
+           'EndGameMessage',
+           'MoveMeToMessage',
+           'MoveOtherToMessage',
+           'ScoreUpdateMessage',
+           'NewFishMessage',
+           'RiseGameDurationMessage',
+           'PositionUpdateMessage',
+           'TurnMeToMessage',
+           'TurnOtherToMessage']
+
 
 def send(transport, message):
     """Wyślij pojedynczą wiadomość przez podany transport.
@@ -103,6 +118,15 @@ class RiseGameDurationMessage(Message):
     """
     def __init__(self, duration):
         self.duration = duration
+
+class PositionUpdateMessage(Message):
+    """Komunikat informujący klientów o nowym położeniu jednego z nich
+    (po wpadnięciu do wody).
+    """
+    def __init__(self, penguin_id, x, y):
+        self.penguin_id = penguin_id
+        self.x = x
+        self.y = y
 
 ########################################################################
 # Klient -> Serwer

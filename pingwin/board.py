@@ -177,6 +177,12 @@ class Board(object):
 
         return False
 
+    def penguin_dropped_into_water(self, penguin_id):
+        """Funkcja zwraca True jeżeli pingwin stoi na kafelce z wodą.
+        """
+        penguin = self.penguins[penguin_id]
+        return self.is_water_tile(penguin.x, penguin.y)
+
     def best_fish_count(self):
         """Zwróć ilość rybek, jaką ma najlepszy z graczy.
         """
@@ -187,6 +193,13 @@ class Board(object):
                 best_score = penguin.fish_count
 
         return best_score
+
+    def update_penguin_position(self, penguin_id, x, y):
+        """Przestaw pingwina w zadaną pozycję.
+        """
+        penguin = self.penguins[penguin_id]
+        penguin.x = x
+        penguin.y = y
 
     def _read_level(self, name):
         """Odczytaj dane poziomu o podanej nazwie.

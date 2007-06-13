@@ -73,8 +73,9 @@ class PenguinSprite(pygame.sprite.Sprite):
         self._load_images()
 
         # Na początku pingwin stoi w miejscu patrząc w dół.
-        self.direction = "Down"
+        self.blinking      = False
         self.current_frame = 0
+        self.direction     = "Down"
         self._set_image()
 
     # Informację o tym, czy pingwin właśnie się przesuwa pobieraj z obiektu
@@ -98,16 +99,32 @@ class PenguinSprite(pygame.sprite.Sprite):
         """
         self._set_image()
 
+    def animate_blink(self, duration):
+        """Zamigotaj sylwetką pingwina przez podaną liczbę sekund.
+        """
+        self.blinking = 1
+        run_after(duration, locked(display_lock)(lambda: self._stop_blinking()))
+
     def flip(self):
         """Zamień obrazek na następną klatkę animacji.
         """
-        self.current_frame += 1
-        self._set_image()
+        if self.moving:
+            self.current_frame += 1
 
-        # Jeżeli pokazaliśmy wszystkie klatki to zakończ animację.
-        if self._is_last_frame():
-            self.current_frame = 0
-            self.penguin.stop()
+            self._set_image()
+
+            # Jeżeli pokazaliśmy wszystkie klatki to zakończ animację.
+            if self._is_last_frame():
+                self.current_frame = 0
+                self.penguin.stop()
+
+        # Podczas migotania pomijaj co trzecią klatkę.
+        if self.blinking:
+            if self.blinking % 3:
+                self._set_empty_image()
+            else:
+                self._set_image()
+            self.blinking += 1
 
     def _is_last_frame(self):
         """Zwróć wartość prawda jeżeli wyświetlamy ostatnią klatkę animacji.
@@ -174,6 +191,18 @@ class PenguinSprite(pygame.sprite.Sprite):
         """
         self.image = self.images[self.direction][self.current_frame]
         self.rect = self.image.get_rect()
+
+    def _set_empty_image(self):
+        """Ustaw pustą przezroczystą klatkę.
+        """
+        self.image = pygame.Surface((0,0))
+        self.rect = self.image.get_rect()
+
+    def _stop_blinking(self):
+        """Przestań migotać.
+        """
+        self.blinking = 0
+        self._set_image()
 
 class BoardSurface(pygame.Surface):
     def __init__(self, board):
@@ -328,6 +357,12 @@ class ClientDisplay(object):
             self._remove_fish_sprite(fish)
 
     @locked(display_lock)
+    def blink_penguin(self, penguin_id):
+        """Zamigotaj sylwetką pingwina przez dwie sekundy.
+        """
+        self.penguins_sprites[penguin_id].animate_blink(duration=2)
+
+    @locked(display_lock)
     def update_score(self, penguin_id, fish_count):
         """Uaktualnij wynik gracza i wyświetl go na ekranie.
         """
@@ -450,11 +485,11 @@ class ClientDisplay(object):
             fish.paint_on(self.screen)
 
     def _flip_penguins_animations(self):
-        """Przestaw klatki w animacji wszystkich poruszających się pingwinów.
+        """Przestaw klatki w animacji wszystkich poruszających się
+        i migających pingwinów.
         """
         for penguin in self.penguins_sprites.values():
-            if penguin.moving:
-                penguin.flip()
+            penguin.flip()
 
     def _paint_penguins(self):
         """Wyświetl wszystkie pingwiny.
