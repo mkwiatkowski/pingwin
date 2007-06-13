@@ -18,7 +18,7 @@ def unlock():
 def locked(function):
     """Dekorator dla funkcji, które mają zakładać blokadę na wejściu
     i zwalniać na wyjściu. Dekorator zapewnia bezwzględne zwolnienie
-    blokade niezależnie od sposobu zakończenia wykonania funkcji
+    blokady niezależnie od sposobu zakończenia wykonania funkcji
     - może to być zarówno normalny powrót, jak i rzucenie wyjątku.
     """
     def locked_function(*args, **kwds):

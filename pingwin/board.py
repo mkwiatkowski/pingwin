@@ -123,6 +123,8 @@ class Board(object):
         self.penguins = make_id_dict(penguins)
 
     def add_fish(self, fish):
+        """Połóż rybkę na planszy.
+        """
         self.fishes.append(fish)
 
     def move_penguin(self, penguin_id, direction):

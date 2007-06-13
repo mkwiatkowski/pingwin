@@ -254,6 +254,8 @@ class ClientDisplay(object):
         self.display_text("Player %d won!" % self._winner_id())
 
     def rise_game_duration(self, duration):
+        """Przedłuż czas trwania gry o podaną liczbę sekund.
+        """
         self.game_duration += duration
 
     def _winner_id(self):
@@ -267,10 +269,12 @@ class ClientDisplay(object):
                 winner_id = index
                 max_score = penguin.fish_count
 
-        # Identyfikator graczy zaczynają się od 1, nie od 0.
+        # Identyfikatory graczy zaczynają się od 1, nie od 0.
         return winner_id + 1
 
     def _remove_fish_sprite(self, fish):
+        """Usuń z planszy sprite reprezentujący daną rybkę.
+        """
         for index, fish_sprite in enumerate(self.fishes_sprites):
             if fish_sprite.fish == fish:
                 self.fishes_sprites.pop(index)
@@ -322,6 +326,8 @@ class ClientDisplay(object):
                 y = 45
 
     def _paint_text(self):
+        """Wyświetl tekst zawarty w atrybucie self.text na środku ekranu.
+        """
         font = pygame.font.Font(None, 36)
         text = font.render(self.text, 1, Color("yellow"), Color("black"))
 

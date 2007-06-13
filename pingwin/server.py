@@ -27,9 +27,13 @@ class Server(Protocol):
       number_of_players  Liczba graczy, która musi się połączyć, by gra mogła
                          się rozpocząć.
       number_of_fishes   Liczba rybek jaka zostanie początkowo umieszczona
-                         na planszy.
+                         na planszy. Jest to jednocześnie maksymalna liczba
+                         rybek, jaka może znaleźć się na planszy.
       new_fish_delay     Liczba sekund jaka musi upłynąć zanim zostaną dodane
                          nowe rybki.
+      game_duration      Limit czasu gry w sekundach. Uwaga: rozgrywka może
+                         trwać więcej niż podany tutaj czas, patrz metoda
+                         _end_game().
     """
     level_name        = None
     number_of_players = None
@@ -208,7 +212,9 @@ class Server(Protocol):
         print "#%s..: %s" % (transport.client_id[:4], message)
 
     def log_message(self, message, transport=None):
-        self.log("Sending %s message." % type(message).__name__, transport)
+        """Wyświetl wiadomość dotyczącą podanego komunikatu.
+        """
+        self.log("Sending %s." % type(message).__name__, transport)
 
 
 def run(level_name='default', number_of_players=2, number_of_fishes=7,

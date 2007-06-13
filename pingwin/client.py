@@ -135,6 +135,7 @@ class PenguinClientProtocol(Protocol):
 
         elif isinstance(message, EndGameMessage):
             print "Game stopped by the server."
+
             display.stop_the_game()
             display.show_results()
             run_after(2, lambda:end_game("Game over."))
