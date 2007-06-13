@@ -60,12 +60,23 @@ def load_image(name):
 def level_path(name):
     return os.path.join(DATA_DIR, 'level', name)
 
-def make_text(text, x, y, size=30, color="white"):
+def make_text(text, x, y, size=30, color="white", background=None):
     font = pygame.font.Font(None, size)
-    text_object = font.render(text, 1, Color(color))
+    if background:
+        text_object = font.render(text, 1, Color(color), Color(background))
+    else:
+        text_object = font.render(text, 1, Color(color))
     text_position = text_object.get_rect(x=x, y=y)
 
     return text_object, text_position
+
+def add_name_to_penguin(penguin_surface):
+    """Dodaj numerek gracza w lewy dolny róg obrazka.
+    """
+    penguin_surface.blit(*make_text("1", 20, 40,
+                                    size=26,
+                                    color="white",
+                                    background="blue"))
 
 #####
 # Funkcje sieciowe.

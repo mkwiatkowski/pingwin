@@ -6,7 +6,8 @@ import pygame
 from pygame.color import Color
 
 from concurrency import locked, create_lock
-from helpers import make_id_dict, load_image, make_text, run_after, run_each
+from helpers import make_id_dict, load_image, make_text, run_after, run_each,\
+    add_name_to_penguin
 
 # Wysokość i szerokość podstawowej kafelki podłoża.
 TILE_WIDTH = 40
@@ -149,8 +150,17 @@ class PenguinSprite(pygame.sprite.Sprite):
         id = 1 # XXX na razie tylko jeden typ/kolor pingwina
 
         def frames_in_direction(direction):
-            return [ load_image('penguin/penguin-%d-%s-%d.gif' % (id, direction, frame))
-                     for frame in range(1, self.number_of_frames+1) ]
+            frames = []
+
+            for frame in range(1, self.number_of_frames+1):
+                # Wczytaj klatkę z dysku.
+                frame = load_image('penguin/penguin-%d-%s-%d.gif' % (id, direction, frame))
+                # Nanieś na klatkę identyfikator gracza.
+                add_name_to_penguin(frame)
+                # Dodaj klatkę do listy.
+                frames.append(frame)
+
+            return frames
 
         self.images = {
             'Up':    frames_in_direction("back"),
