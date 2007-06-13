@@ -156,7 +156,7 @@ class PenguinSprite(pygame.sprite.Sprite):
                 # Wczytaj klatkę z dysku.
                 frame = load_image('penguin/penguin-%d-%s-%d.gif' % (id, direction, frame))
                 # Nanieś na klatkę identyfikator gracza.
-                add_name_to_penguin(frame)
+                add_name_to_penguin(str(self.penguin.number), frame, self.penguin.color)
                 # Dodaj klatkę do listy.
                 frames.append(frame)
 
@@ -418,8 +418,8 @@ class ClientDisplay(object):
 
         x = initial_x
         y = 10
-        for index, penguin in enumerate(self.board.penguins.values()):
-            text = "Player %d  (%d)" % (index + 1, penguin.fish_count)
+        for penguin in self.board.penguins.values():
+            text = "%s  (%d)" % (penguin.name, penguin.fish_count)
             self._blit_text(text, x, y, color=penguin.color)
 
             x += x_step

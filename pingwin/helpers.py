@@ -70,13 +70,13 @@ def make_text(text, x, y, size=30, color="white", background=None):
 
     return text_object, text_position
 
-def add_name_to_penguin(penguin_surface):
-    """Dodaj numerek gracza w lewy dolny róg obrazka.
+def add_name_to_penguin(name, surface, color):
+    """Dodaj identyfikator gracza w lewy dolny róg obrazka.
     """
-    penguin_surface.blit(*make_text("1", 20, 40,
-                                    size=26,
-                                    color="white",
-                                    background="blue"))
+    surface.blit(*make_text(name, 20, 40,
+                            size=26,
+                            color="white",
+                            background=color))
 
 #####
 # Funkcje sieciowe.

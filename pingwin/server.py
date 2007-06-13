@@ -169,11 +169,23 @@ class Server(Protocol):
         penguins_positions = unoccupied_tiles[:Server.number_of_players]
         fishes_positions   = unoccupied_tiles[Server.number_of_players:]
 
-        # Ustaw pingwiny na planszy.
+        # Utwórz listę pingwinów
         penguins = []
         for client_id, position in zip(Server.connected_clients.keys(),
                                        penguins_positions):
             penguins.append(Penguin(client_id, *position))
+
+        # Nadaj pingwinom kolory.
+        color_iterator = cycle(["red", "blue", "green", "yellow", "purple",
+                                "darkgray", "brown", "navyblue"])
+        for penguin in penguins:
+            penguin.color = color_iterator.next()
+
+        # Nadaj pingwinom numerki.
+        for index, penguin in enumerate(penguins):
+            penguin.number = index + 1
+
+        # Ustaw pingwiny na planszy.
         Server.board.set_penguins(penguins)
 
         # Ustaw rybki na planszy.
