@@ -244,14 +244,27 @@ def close_server_by_signal(signal_number, stack_frame):
     time.sleep(1)
     os._exit(0)
 
+def new_fish_delay_by_number_of_players(number_of_players):
+    """Zwróć optymalny czas pojawiania się nowych rybek bazując na liczbie
+    graczy.
+    """
+    if number_of_players <= 2:
+        return 1.75
+    elif number_of_players == 3:
+        return 1.25
+    elif number_of_players == 4:
+        return 1
+    elif number_of_players >= 5:
+        return 0.75
+
 def run(level_name='default', number_of_players=2, number_of_fishes=7,
-        new_fish_delay=2, game_duration=60):
+        game_duration=60):
     """Uruchom serwer obsługujący grę na planszy o podanej nazwie.
     """
     Server.level_name        = level_name
     Server.number_of_players = number_of_players
     Server.number_of_fishes  = number_of_fishes
-    Server.new_fish_delay    = new_fish_delay
+    Server.new_fish_delay    = new_fish_delay_by_number_of_players(number_of_players)
     Server.game_duration     = game_duration
 
     factory = Factory()
