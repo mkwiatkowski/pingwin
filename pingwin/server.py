@@ -14,13 +14,16 @@ from twisted.internet import reactor
 from board import ServerBoard
 from fish import Fish
 from penguin import Penguin
-from concurrency import locked
+from concurrency import locked, create_lock
 from helpers import calculate_client_id, run_each, run_after
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
     MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage,\
     RiseGameDurationMessage, TurnMeToMessage, TurnOtherToMessage
+
+# Blokada dla wszystkich funkcji serwera.
+server_lock = create_lock()
 
 
 class Server(Protocol):
@@ -52,7 +55,7 @@ class Server(Protocol):
     # Obiekt typu ServerBoard określający obecny stan planszy.
     board = None
 
-    @locked
+    @locked(server_lock)
     def connectionMade(self):
         # Wygeneruj unikalny identyfikator klienta i zapamiętaj go.
         client_id = calculate_client_id(self.transport)
@@ -74,7 +77,7 @@ class Server(Protocol):
             print "Got required number of %d players." % Server.number_of_players
             self._init_game()
 
-    @locked
+    @locked(server_lock)
     def connectionLost(self, reason):
         self.log("Client disconnected.")
         Server.connected_clients.pop(self.transport.client_id)
@@ -82,7 +85,7 @@ class Server(Protocol):
         # Jeżeli gra była w toku, musimy ją przerwać.
         self._end_game(right_now=True)
 
-    @locked
+    @locked(server_lock)
     def dataReceived(self, data):
         """Funkcja wywoływana zawsze, gdy otrzymamy dane od któregoś z klientów.
         """
@@ -109,7 +112,7 @@ class Server(Protocol):
 
                 # Server.board.move_penguin ustawiło flagę 'moving', zwolnij ją
                 # po 0.1 sekundy (zapezpiecza przed botami).
-                run_after(0.1, lambda: Server.board.penguins[client_id].stop())
+                run_after(0.1, locked(server_lock)(lambda: Server.board.penguins[client_id].stop()))
             else:
                 self.log("Illegal move.")
 
@@ -147,7 +150,7 @@ class Server(Protocol):
         # Dolicz 10 sekund ekstra
         if not right_now and Server.board.no_winner():
             self._send_to_all(RiseGameDurationMessage(10))
-            run_after(10, lambda: self._end_game())
+            run_after(10, locked(server_lock)(lambda: self._end_game()))
             return
 
         self._send_to_all(EndGameMessage())
@@ -189,6 +192,7 @@ class Server(Protocol):
     def _start_adding_fishes(self):
         """Funkcja inicjująca dodawanie co jakiś czas nowych rybek do planszy.
         """
+        @locked(server_lock)
         def try_to_add_a_fish():
             # Nie dodajemy nowych rybek do zakończonej gry.
             if Server.game_started is False:
@@ -210,6 +214,7 @@ class Server(Protocol):
             # Wyślij do wszystkich klientów powiadomienie o nowej rybce.
             self._send_to_all(NewFishMessage(fish))
 
+        @locked(server_lock)
         def stop_condition():
             return Server.game_started is False
 
@@ -219,7 +224,7 @@ class Server(Protocol):
     def _start_timer(self):
         """Funkcja inicjująca licznik do zakończenia rozgrywki.
         """
-        run_after(Server.game_duration, lambda: self._end_game())
+        run_after(Server.game_duration, locked(server_lock)(lambda: self._end_game()))
 
     def log(self, message, transport=None):
         """Wyświetl wiadomość dotyczącą podanego (lub obecnie obsługiwanego) klienta.

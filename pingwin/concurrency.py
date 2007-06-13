@@ -3,34 +3,24 @@
 import thread
 
 
-global_lock = thread.allocate_lock()
-
 def create_lock():
     """Utwórz nową blokadę.
     """
     return thread.allocate_lock()
 
-def lock():
-    """Załóż blokadę.
-    """
-    global_lock.acquire()
-
-def unlock():
-    """Zwolnij blokadę.
-    """
-    global_lock.release()
-
-def locked(function):
+def locked(lock):
     """Dekorator dla funkcji, które mają zakładać blokadę na wejściu
     i zwalniać na wyjściu. Dekorator zapewnia bezwzględne zwolnienie
     blokady niezależnie od sposobu zakończenia wykonania funkcji
     - może to być zarówno normalny powrót, jak i rzucenie wyjątku.
     """
-    return function # XXX naprawić
-    def locked_function(*args, **kwds):
-        lock()
-        try:
-            function(*args, **kwds)
-        finally:
-            unlock()
-    return locked_function
+    def locking_function(function):
+        def locked_function(*args, **kwds):
+            lock.acquire()
+            try:
+                function(*args, **kwds)
+            finally:
+                lock.release()
+        return locked_function
+
+    return locking_function

@@ -5,6 +5,7 @@ import time
 import pygame
 from pygame.color import Color
 
+from concurrency import locked, create_lock
 from helpers import make_id_dict, load_image, make_text, run_after, run_each
 
 # Wysokość i szerokość podstawowej kafelki podłoża.
@@ -13,6 +14,9 @@ TILE_HEIGHT = 40
 
 # Odległość planszy od górnej granicy ekranu w pikselach.
 STATUS_BAR_HEIGHT = 80
+
+# Blokada dla wszystkich funkcji wyświetlających.
+display_lock = create_lock()
 
 
 class FishSprite(pygame.sprite.Sprite):
@@ -230,6 +234,7 @@ class ClientDisplay(object):
         # Zacznij odświeżać ekran z domyślną częstotliwością.
         refresh_it(self)
 
+    @locked(display_lock)
     def set_board(self, board):
         """Wyświetl na ekranie pustą planszę.
         """
@@ -238,22 +243,26 @@ class ClientDisplay(object):
         # Utworzenie planszy (będzie niezmienna przez całą grę).
         self.board_surface = BoardSurface(self.board)
 
+    @locked(display_lock)
     def set_fishes(self, fishes):
         """Wyświetl rybki na ekranie.
         """
         self.fishes_sprites = [ FishSprite(fish) for fish in fishes ]
 
+    @locked(display_lock)
     def set_penguins(self, penguins):
         """Wyświetl wszystkie pingwiny na ekranie.
         """
         self.penguins_sprites = make_id_dict(penguins, function=PenguinSprite)
 
+    @locked(display_lock)
     def set_timer(self, game_duration):
         """Włącz zegar odliczający sekundy do końca gry.
         """
         self.game_start_time = time.time()
         self.game_duration   = game_duration
 
+    @locked(display_lock)
     def display_text(self, text, duration=None):
         """Pokaż tekst informacyjny na środku ekranu.
 
@@ -265,11 +274,13 @@ class ClientDisplay(object):
         if duration:
             run_after(duration, lambda: self.clear_text())
 
+    @locked(display_lock)
     def clear_text(self):
         """Wyczyść tekst informacyjny.
         """
         self.text = None
 
+    @locked(display_lock)
     def turn_penguin(self, penguin_id, direction):
         """Przekręć pingwina w wybranym kierunku.
 
@@ -281,6 +292,7 @@ class ClientDisplay(object):
         if not penguin.moving:
             penguin.turn(direction)
 
+    @locked(display_lock)
     def turning_makes_sense(self, penguin_id, direction):
         """Zwróć True, gdy przekręcenie danego pingwina w zadanym kierunku
         ma sens, tzn.:
@@ -294,6 +306,7 @@ class ClientDisplay(object):
 
         return False
 
+    @locked(display_lock)
     def move_penguin(self, penguin_id, direction):
         """Przesuń pingwina o podanym id w zadanym kierunku.
         """
@@ -304,31 +317,57 @@ class ClientDisplay(object):
         if fish:
             self._remove_fish_sprite(fish)
 
+    @locked(display_lock)
     def update_score(self, penguin_id, fish_count):
         """Uaktualnij wynik gracza i wyświetl go na ekranie.
         """
         self.board.penguins[penguin_id].fish_count = fish_count
 
+    @locked(display_lock)
     def add_fish(self, fish):
         """Dodaj nową rybę na planszę.
         """
         self.board.add_fish(fish)
         self.fishes_sprites.append(FishSprite(fish))
 
-    def show_results(self):
-        """Wyświetl na ekranie kto zwycieżył tę potyczkę.
-        """
-        self.display_text("Player %d won!" % self._winner_id())
-
+    @locked(display_lock)
     def rise_game_duration(self, duration):
         """Przedłuż czas trwania gry o podaną liczbę sekund.
         """
         self.game_duration += duration
 
+    @locked(display_lock)
     def stop_timer(self):
         """Zatrzymaj zegar.
         """
         del self.game_duration
+
+    @locked(display_lock)
+    def refresh(self):
+        """Przerysuj cały ekran.
+        """
+        if hasattr(self, 'penguins_sprites'):
+            self._paint_status_bar()
+        if hasattr(self, 'board_surface'):
+            self._paint_board()
+        if hasattr(self, 'fishes_sprites'):
+            self._paint_fishes()
+        if hasattr(self, 'penguins_sprites'):
+            self._flip_penguins_animations()
+            self._paint_penguins()
+        if hasattr(self, 'game_duration'):
+            self._paint_timer()
+        if self.text:
+            self._paint_text()
+
+        pygame.display.flip()
+
+    # Tej funkcji nie blokujemy, bo ona tylko owija metodę display_lock(),
+    # która sama zakłada blokadę.
+    def show_results(self):
+        """Wyświetl na ekranie kto zwycieżył tę potyczkę.
+        """
+        self.display_text("Player %d won!" % self._winner_id())
 
     def _winner_id(self):
         """Znajdź identyfikator zwycięskiego gracza.
@@ -351,25 +390,6 @@ class ClientDisplay(object):
             if fish_sprite.fish == fish:
                 self.fishes_sprites.pop(index)
                 return
-
-    def refresh(self):
-        """Przerysuj cały ekran.
-        """
-        if hasattr(self, 'penguins_sprites'):
-            self._paint_status_bar()
-        if hasattr(self, 'board_surface'):
-            self._paint_board()
-        if hasattr(self, 'fishes_sprites'):
-            self._paint_fishes()
-        if hasattr(self, 'penguins_sprites'):
-            self._flip_penguins_animations()
-            self._paint_penguins()
-        if hasattr(self, 'game_duration'):
-            self._paint_timer()
-        if self.text:
-            self._paint_text()
-
-        pygame.display.flip()
 
     def _paint_status_bar(self):
         """Przerysuj pasek stanu, nanosząc aktualne wyniki graczy.

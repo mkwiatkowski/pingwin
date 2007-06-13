@@ -9,8 +9,6 @@ from twisted.internet import threads
 import pygame
 from pygame.color import Color
 
-from concurrency import locked
-
 DATA_DIR = 'data'
 
 #####
@@ -28,10 +26,11 @@ def make_id_dict(iterable, key='id', function=lambda x:x):
 def run_after(duration, function):
     """Uruchom podaną funkcję po upłynięciu zadanego czasu w sekundach.
 
-    Dla bezpieczeństwa funkcja jest automatycznie otaczana blokadą.
+    Uwaga: funkcja *NIE JEST* otaczana blokadą, należy ją założyć
+    samodzielnie w wywoływanej funkcji.
     """
-    defered = threads.deferToThread(lambda:time.sleep(duration))
-    defered.addCallback(lambda x:locked(function)())
+    defered = threads.deferToThread(lambda: time.sleep(duration))
+    defered.addCallback(lambda x: function())
 
 def run_each(duration, function, stop_condition):
     """Uruchamiaj podaną funkcję co podany przedział czasu.

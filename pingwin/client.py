@@ -11,7 +11,7 @@ from twisted.internet import threads
 
 import pygame
 
-from concurrency import locked
+from concurrency import locked, create_lock
 from display import ClientDisplay
 from board import Board
 from helpers import run_after
@@ -21,6 +21,8 @@ from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
     MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage,\
     RiseGameDurationMessage, TurnMeToMessage, TurnOtherToMessage
 
+# Blokada dla wszystkich funkcji klienta.
+client_lock = create_lock()
 
 # Zmienne globalne
 board        = None
@@ -72,19 +74,20 @@ def end_game(reason):
     """
     print reason
     display.display_text(reason)
-    run_after(2, lambda:os._exit(1))
+    run_after(2, lambda: os._exit(1))
 
 class PenguinClientProtocol(Protocol):
     """Klasa służąca do obsługi połączenia z serwerem.
     """
 
-    @locked
+    @locked(client_lock)
     def connectionMade(self):
         """Funkcja wywoływana w momencie nawiązania połączenia z serwerem.
 
         Tutaj inicjowana jest pętla wait_many_times() działająca na funkcji
         get_text_input() pozwalając użytkownikowi na interakcję z klawiatury.
         """
+        @locked(client_lock)
         def take_action_and_send(key):
             global board
             global playing
@@ -115,13 +118,13 @@ class PenguinClientProtocol(Protocol):
         # Zainicuj wątek, który czeka na wejście z klawiatury.
         wait_many_times(on=get_text_input, then=take_action_and_send)
 
-    @locked
+    @locked(client_lock)
     def connectionLost(self, reason):
         global playing
         playing = False
         end_game("Disconnected.")
 
-    @locked
+    @locked(client_lock)
     def dataReceived(self, data):
         """Funkcja wywoływana zawsze, gdy otrzymamy dane od serwera.
         """
@@ -165,7 +168,7 @@ class PenguinClientProtocol(Protocol):
 
             display.stop_timer()
             display.show_results()
-            run_after(2, lambda:end_game("Game over."))
+            run_after(2, lambda: end_game("Game over."))
 
         elif isinstance(message, MoveOtherToMessage):
             print "Got moveOtherTo(%s, %s) message." % (message.penguin_id, message.direction)
