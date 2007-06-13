@@ -5,6 +5,11 @@ import thread
 
 global_lock = thread.allocate_lock()
 
+def create_lock():
+    """Utwórz nową blokadę.
+    """
+    return thread.allocate_lock()
+
 def lock():
     """Załóż blokadę.
     """
@@ -21,6 +26,7 @@ def locked(function):
     blokady niezależnie od sposobu zakończenia wykonania funkcji
     - może to być zarówno normalny powrót, jak i rzucenie wyjątku.
     """
+    return function # XXX naprawić
     def locked_function(*args, **kwds):
         lock()
         try:

@@ -10,6 +10,7 @@ from twisted.internet import threads
 
 import pygame
 
+from concurrency import locked
 from display import ClientDisplay
 from board import Board
 from helpers import run_after
@@ -17,13 +18,14 @@ from helpers import run_after
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
     MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage,\
-    RiseGameDurationMessage
+    RiseGameDurationMessage, TurnMeToMessage, TurnOtherToMessage
 
 
 # Zmienne globalne
 board        = None
-player_id    = None
 display      = None
+player_id    = None
+playing      = False
 
 
 def get_text_input():
@@ -51,9 +53,11 @@ def wait_many_times(on, then):
     Wykonywanie się kończy, gdy `then` rzuci wyjątkiem.
     """
     def do_and_wait_again(data):
+        global playing
         try:
             then(data)
         except Exception, e:
+            playing = False
             end_game("Exception caught: %s." % e)
             return
         wait_many_times(on, then)
@@ -61,12 +65,6 @@ def wait_many_times(on, then):
     # Czekaj aż funkcja `on` zwróci wartość i wtedy wywołaj `do_and_wait_again`.
     d = threads.deferToThread(on)
     d.addCallback(do_and_wait_again)
-
-def take_action(key):
-    """Podejmij odpowiednią akcję na podstawie wciśniętego klawisza.
-    """
-    if is_movement_key(key):
-        display.move_penguin(player_id, key)
 
 def end_game(reason):
     """Zakończ grę wyświetlając na ekranie powód.
@@ -79,30 +77,50 @@ class PenguinClientProtocol(Protocol):
     """Klasa służąca do obsługi połączenia z serwerem.
     """
 
+    @locked
     def connectionMade(self):
         """Funkcja wywoływana w momencie nawiązania połączenia z serwerem.
 
         Tutaj inicjowana jest pętla wait_many_times() działająca na funkcji
         get_text_input() pozwalając użytkownikowi na interakcję z klawiatury.
         """
-        def take_action_and_send(data):
-            take_action(data)
+        def take_action_and_send(key):
+            global board
+            global playing
+            global player_id
 
             # Zakończ program, gdy użytkownik o to prosi.
-            if data == "Quit":
+            if key == "Quit":
+                playing = False
                 end_game("User quit.")
             # Informację o przesunięciu prześlij do serwera.
-            elif is_movement_key(data):
-                send(self.transport, MoveMeToMessage(data))
+            elif is_movement_key(key) and playing:
+                turning_makes_sense = display.turning_makes_sense(player_id, key)
+
+                # Najpierw przekręć pingwina na ekranie.
+                display.turn_penguin(player_id, key)
+
+                # Spróbuj przesunąć pingwina w wybranym kierunku.
+                if board.move_penguin(player_id, key):
+                    display.move_penguin(player_id, key)
+                    send(self.transport, MoveMeToMessage(key))
+                # Jeżeli nie można przesunąć, zobacz czy można chociaż
+                # przekręcić.
+                elif turning_makes_sense:
+                    send(self.transport, TurnMeToMessage(key))
 
         display.display_text("Connected to server, loading board...")
 
         # Zainicuj wątek, który czeka na wejście z klawiatury.
         wait_many_times(on=get_text_input, then=take_action_and_send)
 
+    @locked
     def connectionLost(self, reason):
+        global playing
+        playing = False
         end_game("Disconnected.")
 
+    @locked
     def dataReceived(self, data):
         """Funkcja wywoływana zawsze, gdy otrzymamy dane od serwera.
         """
@@ -111,14 +129,16 @@ class PenguinClientProtocol(Protocol):
             self._processMessage(message)
 
     def _processMessage(self, message):
+        global board
+        global display
+        global player_id
+        global playing
+
         # Pobierz nazwę planszy od serwera, wczytaj ją i pokaż na ekranie.
         if isinstance(message, WelcomeMessage):
             print "Got welcome message from the server."
 
-            global board
             board = Board(message.level_name)
-
-            global player_id
             player_id = message.player_id
 
             display.set_board(board)
@@ -127,21 +147,36 @@ class PenguinClientProtocol(Protocol):
         # Wyświetl pigwiny w pozycjach podanych przez serwer i rozpocznij grę.
         elif isinstance(message, StartGameMessage):
             print "Game started by the server."
+            playing = True
 
+            board.set_fishes(message.fishes)
             display.set_fishes(message.fishes)
+
+            board.set_penguins(message.penguins)
             display.set_penguins(message.penguins)
+
             display.display_text("Go!", duration=1)
             display.set_timer(message.game_duration)
 
         elif isinstance(message, EndGameMessage):
             print "Game stopped by the server."
+            playing = False
 
-            display.stop_the_game()
+            display.stop_timer()
             display.show_results()
             run_after(2, lambda:end_game("Game over."))
 
         elif isinstance(message, MoveOtherToMessage):
+            print "Got moveOtherTo(%s, %s) message." % (message.penguin_id, message.direction)
+
+            display.turn_penguin(message.penguin_id, message.direction)
             display.move_penguin(message.penguin_id, message.direction)
+            board.move_penguin(message.penguin_id, message.direction,
+                               unconditionally=True)
+
+        elif isinstance(message, TurnOtherToMessage):
+            print "Got turnOtherTo(%s, %s) message." % (message.penguin_id, message.direction)
+            display.turn_penguin(message.penguin_id, message.direction)
 
         elif isinstance(message, ScoreUpdateMessage):
             display.update_score(message.penguin_id, message.fish_count)

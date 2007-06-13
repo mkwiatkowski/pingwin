@@ -75,6 +75,14 @@ class MoveOtherToMessage(Message):
         self.penguin_id = penguin_id
         self.direction  = direction
 
+class TurnOtherToMessage(Message):
+    """Komunikat przesyłany z serwera informujący innych graczy o przekręceniu
+    jednego z nich w podanym kierunku.
+    """
+    def __init__(self, penguin_id, direction):
+        self.penguin_id = penguin_id
+        self.direction  = direction
+
 class ScoreUpdateMessage(Message):
     """Komunikat przesyłany w momencie, gdy któryś z graczy zdobędzie nową
     lub straci rybkę.
@@ -101,6 +109,13 @@ class RiseGameDurationMessage(Message):
 #
 class MoveMeToMessage(Message):
     """Komunikat wysyłany przez klienta do serwera informujący o przesunięciu
+    pingwina w jednym z czterech dozwolonych kierunków (Up/Down/Right/Left).
+    """
+    def __init__(self, direction):
+        self.direction = direction
+
+class TurnMeToMessage(Message):
+    """Komunikat wysyłany przez klienta do serwera informujący o przekręceniu
     pingwina w jednym z czterech dozwolonych kierunków (Up/Down/Right/Left).
     """
     def __init__(self, direction):

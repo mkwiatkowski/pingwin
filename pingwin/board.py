@@ -127,7 +127,7 @@ class Board(object):
         """
         self.fishes.append(fish)
 
-    def move_penguin(self, penguin_id, direction):
+    def move_penguin(self, penguin_id, direction, unconditionally=False):
         """Przesuń pingwina o podanym id w zadanym kierunku.
 
         Zwraca True jeżeli ruch był możliwy, False w przeciwnym wypadku.
@@ -135,6 +135,10 @@ class Board(object):
         assert direction in ["Up", "Down", "Right", "Left"]
 
         penguin = self.penguins[penguin_id]
+
+        # Jeżeli pingwin właśnie się porusza, żądanie jest ignorowane.
+        if penguin.moving and not unconditionally:
+            return False
 
         next_location_x = penguin.x
         next_location_y = penguin.y
@@ -150,12 +154,13 @@ class Board(object):
 
         # Jeżeli krok skierowany jest w stronę wolnego pola i nie wykracza
         # ono poza planszę, to krok jest wykonywany.
-        if self.is_free_tile(next_location_x, next_location_y):
-            if 0 <= next_location_x < self.x_count \
-                    and 0 <= next_location_y < self.y_count:
-                penguin.x = next_location_x
-                penguin.y = next_location_y
-                return True
+        if self.is_free_tile(next_location_x, next_location_y) \
+                and 0 <= next_location_x < self.x_count \
+                and 0 <= next_location_y < self.y_count:
+            penguin.x = next_location_x
+            penguin.y = next_location_y
+            penguin.moving = True
+            return True
 
         return False
 

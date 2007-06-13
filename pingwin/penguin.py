@@ -6,7 +6,13 @@ class Penguin(object):
         self.color = color
 
         self.fish_count = 0
+        self.moving = False
 
     def eat_fish(self):
         self.fish_count += 1
         return self.fish_count
+
+    def stop(self):
+        """Zatrzymaj pingwina.
+        """
+        self.moving = False

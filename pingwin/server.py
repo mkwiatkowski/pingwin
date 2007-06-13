@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import signal
+import time
+import os
+
 from itertools import cycle
 
 from twisted.internet.protocol import Factory
@@ -15,7 +19,7 @@ from helpers import calculate_client_id, run_each, run_after
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
     MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage,\
-    RiseGameDurationMessage
+    RiseGameDurationMessage, TurnMeToMessage, TurnOtherToMessage
 
 
 class Server(Protocol):
@@ -67,7 +71,6 @@ class Server(Protocol):
         # Rozpocznij grę jeżeli połączyła się wystarczająca liczba graczy.
         if len(Server.connected_clients) == Server.number_of_players:
             print "Got required number of %d players." % Server.number_of_players
-
             self._init_game()
 
     @locked
@@ -95,15 +98,25 @@ class Server(Protocol):
             # Przesuń pingwina na swojej planszy i jeżeli ruch był poprawny
             # wyślij wiadomość do pozostałych graczy.
             client_id = self.transport.client_id
-            self.log("Received moveTo(%s), sending to other." % message.direction)
+            self.log("Received moveTo(%s)." % message.direction)
 
             if Server.board.move_penguin(client_id, message.direction):
-                self._send_to_other(self.transport,
-                                    MoveOtherToMessage(client_id,
-                                                       message.direction))
+                self._send_to_other(MoveOtherToMessage(client_id, message.direction))
                 if Server.board.penguin_ate_fish(client_id):
                     new_fish_count = Server.board.penguins[client_id].eat_fish()
                     self._send_to_all(ScoreUpdateMessage(client_id, new_fish_count))
+
+                # Server.board.move_penguin ustawiło flagę 'moving', zwolnij ją
+                # po 0.1 sekundy (zapezpiecza przed botami).
+                run_after(0.1, lambda: Server.board.penguins[client_id].stop())
+            else:
+                self.log("Illegal move.")
+
+        elif isinstance(message, TurnMeToMessage):
+            client_id = self.transport.client_id
+            self.log("Received turnTo(%s)." % message.direction)
+
+            self._send_to_other(TurnOtherToMessage(client_id, message.direction))
 
     def _send_to_all(self, message):
         """Wyślij wiadomość do wszystkich klientów.
@@ -112,8 +125,9 @@ class Server(Protocol):
             self.log_message(message, transport)
             send(transport, message)
 
-    def _send_to_other(self, transport, message):
-        """Wyślij wiadomość do wszystkich klientów poza podanym.
+    def _send_to_other(self, message):
+        """Wyślij wiadomość do wszystkich klientów poza obecnym
+        (czyli `self.transport`).
         """
         for transport in Server.connected_clients.values():
             if transport.client_id != self.transport.client_id:
@@ -126,15 +140,17 @@ class Server(Protocol):
         Jeżeli `right_now` nie jest równy True gra nie zakończy się dopóki
         gra nie ma rozstrzygnięcia (tzn. nie ma jednego zwycięskiego gracza).
         """
+        if not Server.game_started:
+            return
+
         # Dolicz 10 sekund ekstra
         if not right_now and Server.board.no_winner():
             self._send_to_all(RiseGameDurationMessage(10))
             run_after(10, lambda: self._end_game())
             return
 
-        if Server.game_started:
-            self._send_to_all(EndGameMessage())
-            Server.game_started = False
+        self._send_to_all(EndGameMessage())
+        Server.game_started = False
 
     def _init_game(self):
         """Zainicjuj wszystkie potrzebne struktury i rozpocznij grę wysyłając
@@ -216,6 +232,11 @@ class Server(Protocol):
         """
         self.log("Sending %s." % type(message).__name__, transport)
 
+def close_server_by_signal(signal_number, stack_frame):
+    print "User requested exit."
+    reactor.stop()
+    time.sleep(1)
+    os._exit(0)
 
 def run(level_name='default', number_of_players=2, number_of_fishes=7,
         new_fish_delay=2, game_duration=60):
@@ -229,6 +250,9 @@ def run(level_name='default', number_of_players=2, number_of_fishes=7,
 
     factory = Factory()
     factory.protocol = Server
+
+    # Zarejestruj obsługę sygnału kończącego (Ctrl-C).
+    signal.signal(signal.SIGINT, close_server_by_signal)
 
     reactor.listenTCP(8888, factory)
     reactor.run()
