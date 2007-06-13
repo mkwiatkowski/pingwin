@@ -12,6 +12,7 @@ import pygame
 
 from display import ClientDisplay
 from board import Board
+from helpers import run_after
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
@@ -71,8 +72,7 @@ def end_game(reason):
     """
     print reason
     display.display_text(reason)
-    time.sleep(2)
-    os._exit(1)
+    run_after(2, lambda:os._exit(1))
 
 class PenguinClientProtocol(Protocol):
     """Klasa służąca do obsługi połączenia z serwerem.
@@ -134,7 +134,9 @@ class PenguinClientProtocol(Protocol):
 
         elif isinstance(message, EndGameMessage):
             print "Game stopped by the server."
-            end_game("Game over.")
+            display.stop_the_game()
+            display.show_results()
+            run_after(2, lambda:end_game("Game over."))
 
         elif isinstance(message, MoveOtherToMessage):
             display.move_penguin(message.penguin_id, message.direction)

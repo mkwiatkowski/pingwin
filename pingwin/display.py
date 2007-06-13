@@ -243,6 +243,30 @@ class ClientDisplay(object):
         self.fishes_sprites.append(FishSprite(fish))
         self._repaint()
 
+    def stop_the_game(self):
+        """Zatrzymaj grę.
+        """
+        self.playing = False
+
+    def show_results(self):
+        """Wyświetl na ekranie kto zwycieżył tę potyczkę.
+        """
+        self.display_text("Player %d won!" % self._winner_id())
+
+    def _winner_id(self):
+        """Znajdź identyfikator zwycięskiego gracza.
+        """
+        winner_id = -1
+        max_score = -1
+
+        for index, penguin in enumerate(self.board.penguins.values()):
+            if penguin.fish_count > max_score:
+                winner_id = index
+                max_score = penguin.fish_count
+
+        # Identyfikator graczy zaczynają się od 1, nie od 0.
+        return winner_id + 1
+
     def _remove_fish_sprite(self, fish):
         for index, fish_sprite in enumerate(self.fishes_sprites):
             if fish_sprite.fish == fish:
@@ -326,6 +350,9 @@ class ClientDisplay(object):
     def _paint_timer(self):
         """Wyświetl zegar.
         """
+        if not self.playing:
+            return
+
         elapsed_time      = int(time.time() - self.game_start_time + 0.5)
         remaining_time    = self.game_duration - elapsed_time
         remaining_minutes = remaining_time / 60
