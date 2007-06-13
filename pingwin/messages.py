@@ -53,12 +53,14 @@ class StartGameMessage(Message):
     rozgrywki.
 
     Atrybuty:
-      penguins  lista pingwinów uczestnicących w grze
-      fishes    lista rybek początkowo leżących na planszy
+      penguins       lista pingwinów uczestnicących w grze
+      fishes         lista rybek początkowo leżących na planszy
+      game_duration  czas trwania partii
     """
-    def __init__(self, penguins, fishes):
-        self.penguins = penguins
-        self.fishes   = fishes
+    def __init__(self, penguins, fishes, game_duration):
+        self.penguins      = penguins
+        self.fishes        = fishes
+        self.game_duration = game_duration
 
 class EndGameMessage(Message):
     """Komunikat oznaczający koniec gry.

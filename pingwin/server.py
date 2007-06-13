@@ -10,7 +10,7 @@ from board import ServerBoard
 from fish import Fish
 from penguin import Penguin
 from concurrency import locked
-from helpers import calculate_client_id, run_each
+from helpers import calculate_client_id, run_each, run_after
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
@@ -71,9 +71,7 @@ class Server(Protocol):
         Server.connected_clients.pop(self.transport.client_id)
 
         # Jeżeli gra była w toku, musimy ją przerwać.
-        if Server.game_started:
-            self._send_to_all(EndGameMessage())
-            Server.game_started = False
+        self._end_game()
 
     @locked
     def dataReceived(self, data):
@@ -117,6 +115,13 @@ class Server(Protocol):
                 self.log_message(message, transport)
                 send(transport, message)
 
+    def _end_game(self):
+        """Zakończ rozgrywkę.
+        """
+        if Server.game_started:
+            self._send_to_all(EndGameMessage())
+            Server.game_started = False
+
     def _init_game(self):
         """Zainicjuj wszystkie potrzebne struktury i rozpocznij grę wysyłając
         wszystkim graczom komunikat StartGameMessage.
@@ -144,10 +149,11 @@ class Server(Protocol):
         Server.board.set_fishes(fishes)
 
         # Wyślij wiadomość o rozpoczęciu gry do każdego z klientów.
-        self._send_to_all(StartGameMessage(penguins, fishes))
+        self._send_to_all(StartGameMessage(penguins, fishes, Server.game_duration))
 
         Server.game_started = True
         self._start_adding_fishes()
+        self._start_timer()
 
     def _start_adding_fishes(self):
         """Funkcja inicjująca dodawanie co jakiś czas nowych rybek do planszy.
@@ -175,6 +181,11 @@ class Server(Protocol):
         # Zainicjuj wykonywanie tej funkcji co Server.new_fish_delay sekund.
         run_each(Server.new_fish_delay, try_to_add_a_fish, stop_condition)
 
+    def _start_timer(self):
+        """Funkcja inicjująca licznik do zakończenia rozgrywki.
+        """
+        run_after(Server.game_duration, lambda: self._end_game())
+
     def log(self, message, transport=None):
         """Wyświetl wiadomość dotyczącą podanego (lub obecnie obsługiwanego) klienta.
         """
@@ -186,13 +197,15 @@ class Server(Protocol):
         self.log("Sending %s message." % type(message).__name__, transport)
 
 
-def run(level_name='default', number_of_players=2, number_of_fishes=7, new_fish_delay=2):
+def run(level_name='default', number_of_players=2, number_of_fishes=7,
+        new_fish_delay=2, game_duration=60):
     """Uruchom serwer obsługujący grę na planszy o podanej nazwie.
     """
     Server.level_name        = level_name
     Server.number_of_players = number_of_players
     Server.number_of_fishes  = number_of_fishes
     Server.new_fish_delay    = new_fish_delay
+    Server.game_duration     = game_duration
 
     factory = Factory()
     factory.protocol = Server

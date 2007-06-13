@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import time
+
 import pygame
 from pygame.color import Color
 
@@ -188,6 +190,12 @@ class ClientDisplay(object):
         self.playing = True
         self._repaint()
 
+    def set_timer(self, game_duration):
+        """Włącz zegar odliczający sekundy do końca gry.
+        """
+        self.game_start_time = time.time()
+        self.game_duration   = game_duration
+
     def display_text(self, text, duration=None):
         """Pokaż tekst informacyjny na środku ekranu.
         """
@@ -251,6 +259,8 @@ class ClientDisplay(object):
             self._paint_fishes()
         if hasattr(self, 'penguins_sprites'):
             self._paint_penguins()
+        if hasattr(self, 'game_duration'):
+            self._paint_timer()
         if self.text:
             self._paint_text()
         pygame.display.flip()
@@ -312,6 +322,24 @@ class ClientDisplay(object):
             assert 0 <= penguin.y < self.board.y_count
 
             penguin.paint_on(self.screen)
+
+    def _paint_timer(self):
+        """Wyświetl zegar.
+        """
+        elapsed_time      = int(time.time() - self.game_start_time + 0.5)
+        remaining_time    = self.game_duration - elapsed_time
+        remaining_minutes = remaining_time / 60
+        remaining_seconds = remaining_time % 60
+
+        current_time = "%02d:%02d" % (remaining_minutes, remaining_seconds)
+
+        # Zegar normalnie jest zielony; staje się czerwony przez ostatnie
+        # 10 sekund.
+        color = "green"
+        if remaining_time < 10:
+            color = "red"
+
+        self._blit_text(current_time, 540, 420, size=36, color=color)
 
     def _blit_text(self, *args, **kwds):
         self.screen.blit(*make_text(*args, **kwds))

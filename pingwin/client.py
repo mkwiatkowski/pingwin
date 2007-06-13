@@ -130,6 +130,7 @@ class PenguinClientProtocol(Protocol):
             display.set_fishes(message.fishes)
             display.set_penguins(message.penguins)
             display.display_text("Go!", duration=1)
+            display.set_timer(message.game_duration)
 
         elif isinstance(message, EndGameMessage):
             print "Game stopped by the server."
