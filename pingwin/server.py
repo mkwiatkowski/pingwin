@@ -14,7 +14,8 @@ from helpers import calculate_client_id, run_each, run_after
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
-    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage
+    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage,\
+    RiseGameDurationMessage
 
 
 class Server(Protocol):
@@ -71,7 +72,7 @@ class Server(Protocol):
         Server.connected_clients.pop(self.transport.client_id)
 
         # Jeżeli gra była w toku, musimy ją przerwać.
-        self._end_game()
+        self._end_game(right_now=True)
 
     @locked
     def dataReceived(self, data):
@@ -115,9 +116,18 @@ class Server(Protocol):
                 self.log_message(message, transport)
                 send(transport, message)
 
-    def _end_game(self):
+    def _end_game(self, right_now=False):
         """Zakończ rozgrywkę.
+
+        Jeżeli `right_now` nie jest równy True gra nie zakończy się dopóki
+        gra nie ma rozstrzygnięcia (tzn. nie ma jednego zwycięskiego gracza).
         """
+        # Dolicz 10 sekund ekstra
+        if not right_now and Server.board.no_winner():
+            self._send_to_all(RiseGameDurationMessage(10))
+            run_after(10, lambda: self._end_game())
+            return
+
         if Server.game_started:
             self._send_to_all(EndGameMessage())
             Server.game_started = False
@@ -159,6 +169,10 @@ class Server(Protocol):
         """Funkcja inicjująca dodawanie co jakiś czas nowych rybek do planszy.
         """
         def try_to_add_a_fish():
+            # Nie dodajemy nowych rybek do zakończonej gry.
+            if Server.game_started is False:
+                return
+
             # Nie dodajemy nowych rybek keżeli na planszy leży ich
             # wystarczająca ilość.
             if len(Server.board.fishes) >= Server.number_of_fishes:
@@ -176,7 +190,7 @@ class Server(Protocol):
             self._send_to_all(NewFishMessage(fish))
 
         def stop_condition():
-            Server.game_started is False
+            return Server.game_started is False
 
         # Zainicjuj wykonywanie tej funkcji co Server.new_fish_delay sekund.
         run_each(Server.new_fish_delay, try_to_add_a_fish, stop_condition)

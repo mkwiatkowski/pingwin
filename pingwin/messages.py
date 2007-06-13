@@ -90,6 +90,12 @@ class NewFishMessage(Message):
     def __init__(self, fish):
         self.fish = fish
 
+class RiseGameDurationMessage(Message):
+    """Komunikat wysyłany do klientów w momencie, gdy gra jest przedłużana.
+    """
+    def __init__(self, duration):
+        self.duration = duration
+
 ########################################################################
 # Klient -> Serwer
 #

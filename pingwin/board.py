@@ -170,6 +170,17 @@ class Board(object):
 
         return False
 
+    def best_fish_count(self):
+        """Zwróć ilość rybek, jaką ma najlepszy z graczy.
+        """
+        best_score = -1
+
+        for penguin in self.penguins.values():
+            if penguin.fish_count > best_score:
+                best_score = penguin.fish_count
+
+        return best_score
+
     def _read_level(self, name):
         """Odczytaj dane poziomu o podanej nazwie.
         """
@@ -198,3 +209,16 @@ class ServerBoard(Board):
             y = random.randrange(0, self.y_count)
             if self.is_unoccupied_tile(x, y):
                 return (x, y)
+
+    def no_winner(self):
+        """Zwróć True jeżeli nie można wyłonić zwycięzcy (np. w przypadku,
+        gdy dwoje lub więcej graczy jest równocześnie na pierwszym miejscu).
+        """
+        best_score = self.best_fish_count()
+        players_with_best_score = 0
+
+        for penguin in self.penguins.values():
+            if penguin.fish_count == best_score:
+                players_with_best_score += 1
+
+        return players_with_best_score > 1

@@ -16,7 +16,8 @@ from helpers import run_after
 
 from messages import send, receive
 from messages import WelcomeMessage, StartGameMessage, EndGameMessage,\
-    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage
+    MoveMeToMessage, MoveOtherToMessage, ScoreUpdateMessage, NewFishMessage,\
+    RiseGameDurationMessage
 
 
 # Zmienne globalne
@@ -146,6 +147,9 @@ class PenguinClientProtocol(Protocol):
 
         elif isinstance(message, NewFishMessage):
             display.add_fish(message.fish)
+
+        elif isinstance(message, RiseGameDurationMessage):
+            display.rise_game_duration(message.duration)
 
         # W innym wypadku po prostu wyświetl otrzymane dane.
         else:

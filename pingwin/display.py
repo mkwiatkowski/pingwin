@@ -253,6 +253,9 @@ class ClientDisplay(object):
         """
         self.display_text("Player %d won!" % self._winner_id())
 
+    def rise_game_duration(self, duration):
+        self.game_duration += duration
+
     def _winner_id(self):
         """Znajdź identyfikator zwycięskiego gracza.
         """
