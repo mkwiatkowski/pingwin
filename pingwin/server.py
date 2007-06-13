@@ -256,6 +256,8 @@ def run(level_name='default', number_of_players=2, number_of_fishes=7,
     signal.signal(signal.SIGINT, close_server_by_signal)
 
     reactor.listenTCP(8888, factory)
+
+    print "Server started. Waiting for connections..."
     reactor.run()
 
 if __name__ == '__main__':
