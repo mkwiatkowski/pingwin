@@ -32,5 +32,5 @@ class Penguin(object):
             self.fish_count = 0
         return self.fish_count
 
-    def _getname(self): return "Player %d" % self.number
+    def _getname(self): return "Gracz %d" % self.number
     name = property(_getname)

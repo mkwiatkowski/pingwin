@@ -58,7 +58,7 @@ def wait_many_times(on, then):
             then(data)
         except Exception, e:
             playing = False
-            end_game("Exception caught: %s." % e)
+            end_game("Wyjatek: %s" % e)
             return
         wait_many_times(on, then)
 
@@ -93,7 +93,7 @@ class PenguinClientProtocol(Protocol):
             # Zakończ program, gdy użytkownik o to prosi.
             if key == "Quit":
                 playing = False
-                end_game("User quit.")
+                end_game("Wyjscie z gry")
             # Informację o przesunięciu prześlij do serwera.
             elif is_movement_key(key) and playing:
                 turning_makes_sense = display.turning_makes_sense(player_id, key)
@@ -110,7 +110,7 @@ class PenguinClientProtocol(Protocol):
                 elif turning_makes_sense:
                     send(self.transport, TurnMeToMessage(key))
 
-        display.display_text("Connected to server, loading board...")
+        display.display_text("Polaczono z serwerem, wczytuje plansze...")
 
         # Zainicuj wątek, który czeka na wejście z klawiatury.
         wait_many_times(on=get_text_input, then=take_action_and_send)
@@ -119,7 +119,7 @@ class PenguinClientProtocol(Protocol):
     def connectionLost(self, reason):
         global playing
         playing = False
-        end_game("Disconnected.")
+        end_game("Rozlaczono z serwerem")
 
     @locked(client_lock)
     def dataReceived(self, data):
@@ -143,7 +143,7 @@ class PenguinClientProtocol(Protocol):
             player_id = message.player_id
 
             display.set_board(board)
-            display.display_text("Waiting for other players to join...")
+            display.display_text("Czekam na pozostalych graczy...")
 
         # Wyświetl pigwiny w pozycjach podanych przez serwer i rozpocznij grę.
         elif isinstance(message, StartGameMessage):
@@ -156,7 +156,7 @@ class PenguinClientProtocol(Protocol):
             board.set_penguins(message.penguins)
             display.set_penguins(message.penguins)
 
-            display.display_text("Go!", duration=1)
+            display.display_text("Start!", duration=1)
             display.set_timer(message.game_duration)
 
         elif isinstance(message, EndGameMessage):
@@ -165,7 +165,7 @@ class PenguinClientProtocol(Protocol):
 
             display.stop_timer()
             display.show_results()
-            run_after(2, lambda: end_game("Game over."))
+            run_after(2, lambda: end_game("Koniec gry"))
 
         elif isinstance(message, MoveOtherToMessage):
             print "Got moveOtherTo(%s, %s) message." % (message.penguin_id, message.direction)
@@ -210,7 +210,7 @@ def run(server_address):
     global display
 
     display = ClientDisplay()
-    display.display_text("Connecting to server...")
+    display.display_text("Laczenie z serwerem...")
     connection = ClientConnection(server_address)
 
     # Oddajemy sterowanie do głównej pętli biblioteki Twisted.

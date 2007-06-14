@@ -414,7 +414,7 @@ class ClientDisplay(object):
     def show_results(self):
         """Wyświetl na ekranie kto zwycieżył tę potyczkę.
         """
-        self.display_text("Player %d won!" % self._winner_id())
+        self.display_text("Wygral gracz %d!" % self._winner_id())
 
     def _winner_id(self):
         """Znajdź identyfikator zwycięskiego gracza.
