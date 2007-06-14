@@ -14,7 +14,7 @@ TILE_WIDTH = 40
 TILE_HEIGHT = 40
 
 # Odległość planszy od górnej granicy ekranu w pikselach.
-STATUS_BAR_HEIGHT = 80
+STATUS_BAR_HEIGHT = 130
 
 # Blokada dla wszystkich funkcji wyświetlających.
 display_lock = create_lock()
@@ -253,9 +253,9 @@ class BoardSurface(pygame.Surface):
 class ClientDisplay(object):
     "Klasa służąca do manipulowania ekranem."
 
-    # Gra działa w rozdzielczości 640x480.
+    # Gra działa w rozdzielczości 640x530.
     width = 640
-    height = 480
+    height = 530
 
     def __init__(self, title="Penguin"):
         self.title = title
@@ -267,6 +267,9 @@ class ClientDisplay(object):
 
         # Ustawienie powtarzania klawiszy.
         pygame.key.set_repeat(200, 30)
+
+        # Wczytaj obrazek na górną belkę.
+        self.status_bar_image = load_image('header.jpg')
 
         self.text = None
 
@@ -391,8 +394,7 @@ class ClientDisplay(object):
     def refresh(self):
         """Przerysuj cały ekran.
         """
-        if hasattr(self, 'penguins_sprites'):
-            self._paint_status_bar()
+        self._paint_status_bar()
         if hasattr(self, 'board_surface'):
             self._paint_board()
         if hasattr(self, 'fishes_sprites'):
@@ -439,28 +441,18 @@ class ClientDisplay(object):
     def _paint_status_bar(self):
         """Przerysuj pasek stanu, nanosząc aktualne wyniki graczy.
         """
-        # Nanieś czarne tło. XXX nałożyć ładną bitmapę
         status_bar = pygame.Surface((self.width, STATUS_BAR_HEIGHT))
+        status_bar.blit(self.status_bar_image, (0,0))
         self.screen.blit(status_bar, (0,0))
 
-        initial_x = 15
-        if len(self.board.penguins) <= 4:
-            x_step = 305
-        elif len(self.board.penguins) <= 6:
-            x_step = 207
-        else:
-            pass # XXX zrobić inny układ
+        if hasattr(self, 'penguins_sprites'):
+            # XXX Położenia linii wyników dla maksymalnie 6 graczy.
+            scores_positions = [(15,10), (15,45), (15,80), (222,10), (222,45), (222,80)]
 
-        x = initial_x
-        y = 10
-        for penguin in self.board.penguins.values():
-            text = "%s  (%d)" % (penguin.name, penguin.fish_count)
-            self._blit_text(text, x, y, color=penguin.color)
-
-            x += x_step
-            if x + x_step > self.width:
-                x = initial_x
-                y = 45
+            for penguin, (x,y) in zip(self.board.penguins.values(),
+                                      scores_positions):
+                text = "%s  (%d)" % (penguin.name, penguin.fish_count)
+                self._blit_text(text, x, y, color=penguin.color)
 
     def _paint_text(self):
         """Wyświetl tekst zawarty w atrybucie self.text na środku ekranu.
@@ -500,7 +492,6 @@ class ClientDisplay(object):
     def _paint_timer(self):
         """Wyświetl zegar.
         """
-
         elapsed_time      = int(time.time() - self.game_start_time + 0.5)
         remaining_time    = self.game_duration - elapsed_time
         remaining_minutes = remaining_time / 60
@@ -514,7 +505,7 @@ class ClientDisplay(object):
         if remaining_time < 10:
             color = "red"
 
-        self._blit_text(current_time, 540, 420, size=36, color=color)
+        self._blit_text(current_time, 540, 470, size=36, color=color)
 
     def _blit_text(self, *args, **kwds):
         self.screen.blit(*make_text(*args, **kwds))
