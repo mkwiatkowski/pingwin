@@ -463,7 +463,7 @@ class ClientDisplay(object):
         x = (self.width - text.get_width()) / 2
         y = (self.height - text.get_height()) / 2
 
-        self.screen.blit(text, text.get_rect(x=x, y=y))
+        self.screen.blit(text, (x, y))
 
     def _paint_board(self):
         """Wyświetl podłoże planszy.

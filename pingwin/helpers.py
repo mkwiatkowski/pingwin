@@ -66,7 +66,7 @@ def make_text(text, x, y, size=30, color="white", background=None):
         text_object = font.render(text, 1, Color(color), Color(background))
     else:
         text_object = font.render(text, 1, Color(color))
-    text_position = text_object.get_rect(x=x, y=y)
+    text_position = (x, y)
 
     return text_object, text_position
 
